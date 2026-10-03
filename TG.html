@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050608">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>News Drop — Публикация в Telegram</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #050608;
+        color: #e2e8f0;
+        -webkit-text-size-adjust: 100%;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 18px; }
+
+    .field {
+        background: #020617; border: 1px solid #1e293b; color: #fff;
+        border-radius: 10px; padding: 10px 12px; font-size: 14px; width: 100%;
+        outline: none; transition: border-color .15s; min-height: 44px;
+    }
+    .field:focus { border-color: #f59e0b; }
+    textarea.field { min-height: 90px; }
+    /* 16px на мобильных — иначе iOS зумит страницу при фокусе в поле */
+    @media (max-width: 640px) {
+        .field { font-size: 16px; }
+    }
+    .label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+
+    .btn {
+        min-height: 44px; border-radius: 10px; font-size: 13px; font-weight: 700;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        border: 1px solid #1e293b; background: #1e293b; color: #e2e8f0;
+        transition: all .15s; padding: 0 14px; cursor: pointer;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-ghost { background: #0b1120; color: #cbd5e1; }
+    .btn-primary {
+        background: linear-gradient(90deg, #f59e0b, #f97316, #f43f5e);
+        color: #0f172a; font-weight: 900; text-transform: uppercase;
+        letter-spacing: .04em; border: none; min-height: 52px; font-size: 14px;
+    }
+    .btn-primary:disabled { opacity: .45; }
+
+    /* ---- Компактный приём картинки ---- */
+    .intake {
+        display: flex; align-items: center; gap: 8px;
+        background: #0b1120; border: 1px dashed #334155; border-radius: 12px;
+        padding: 8px; transition: all .18s ease;
+    }
+    .intake.dragover { border-color: #f59e0b; background: rgba(245,158,11,.08); }
+    .intake-hint {
+        flex: 1; min-width: 0; font-size: 12px; color: #64748b;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ---- Миниатюры ---- */
+    .thumb {
+        position: relative; border-radius: 12px; overflow: hidden;
+        border: 1px solid #1e293b; background: #0b1120;
+    }
+    .thumb img { width: 100%; display: block; object-fit: cover; height: 130px; }
+    .thumb .thumb-bar {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,0));
+        padding: 16px 8px 6px; font-size: 10px; font-family: monospace; color: #cbd5e1;
+        display: flex; justify-content: space-between; gap: 6px;
+    }
+    .thumb .thumb-del {
+        position: absolute; top: 6px; right: 6px;
+        background: rgba(15,23,42,.92); border: 1px solid #334155; border-radius: 8px;
+        width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+        color: #fda4af; cursor: pointer;
+    }
+    .thumb .thumb-idx {
+        position: absolute; top: 6px; left: 6px;
+        background: rgba(15,23,42,.92); border: 1px solid #334155; border-radius: 8px;
+        padding: 2px 7px; font-size: 10px; font-weight: 800; color: #fbbf24; font-family: monospace;
+    }
+
+    /* ---- Чипы хэштегов ---- */
+    .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        border-radius: 999px; padding: 7px 12px; min-height: 38px;
+        font-size: 13px; font-weight: 600; cursor: pointer;
+        border: 1px solid #1e293b; background: #0b1120; color: #94a3b8;
+        transition: all .15s; user-select: none;
+    }
+    .chip.active { background: rgba(245,158,11,.16); border-color: #f59e0b; color: #fbbf24; font-weight: 800; }
+    .chip .chip-x { opacity: .45; font-size: 15px; line-height: 1; }
+    .chip .chip-x:hover { opacity: 1; color: #fb7185; }
+    .chip-add { border-style: dashed; color: #64748b; }
+
+    /* ---- Превью поста ---- */
+    .tg-preview {
+        background: #17212b; border-radius: 14px; overflow: hidden;
+        border: 1px solid #22303c; width: 100%; max-width: 420px;
+    }
+    .tg-preview img { width: 100%; display: block; }
+    .tg-preview .tg-text {
+        padding: 10px 12px 12px; font-size: 14px; line-height: 1.45; color: #f1f5f9;
+        white-space: pre-wrap; word-break: break-word;
+    }
+    .tg-preview .tg-text a { color: #6ab3f3; text-decoration: none; }
+
+    .log-line { font-family: monospace; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #1e293b; word-break: break-word; }
+    .log-ok { color: #34d399; }
+    .log-err { color: #fb7185; }
+    .log-info { color: #94a3b8; }
+
+    /* ---- Липкая кнопка публикации на телефоне ---- */
+    .sticky-bar {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+        background: rgba(5,6,8,.95);
+        border-top: 1px solid #1e293b;
+        padding: 10px 14px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        display: flex; gap: 10px; align-items: center;
+    }
+    @media (min-width: 1280px) { .sticky-bar { display: none; } }
+</style>
+</head>
+<body class="p-3 sm:p-4 lg:p-6 min-h-screen pb-32 xl:pb-6">
+
+<!-- ШАПКА -->
+<div class="max-w-7xl mx-auto mb-4 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+    <h1 class="text-lg sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-amber-400 via-pink-500 to-purple-400 bg-clip-text text-transparent leading-tight">
+        NEWS DROP · ПУБЛИКАЦИЯ
+    </h1>
+    <div id="conn-badge" class="text-[10px] sm:text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-400 shrink-0 max-w-[45%] truncate">
+        Бот не проверен
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
+
+    <!-- ЛЕВАЯ КОЛОНКА -->
+    <div class="xl:col-span-7 flex flex-col gap-4 sm:gap-6">
+
+        <!-- КАРТИНКА -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-amber-400">
+                    <span class="material-icons text-xl">image</span>
+                    <h3 class="font-bold text-sm sm:text-base text-white">Картинка</h3>
+                </div>
+                <span id="img-count" class="text-[11px] font-mono text-slate-500">0 / 10</span>
+            </div>
+
+            <div id="intake" class="intake">
+                <button type="button" class="btn btn-ghost shrink-0" onclick="document.getElementById('file-input').click()">
+                    <span class="material-icons text-base">photo_library</span>
+                    <span>Галерея</span>
+                </button>
+                <button type="button" class="btn btn-ghost shrink-0" onclick="pasteFromClipboard()">
+                    <span class="material-icons text-base">content_paste</span>
+                    <span class="hidden sm:inline">Буфер</span>
+                </button>
+                <span class="intake-hint">или перетащи файл / Ctrl+V</span>
+                <input type="file" id="file-input" accept="image/*" multiple class="hidden">
+            </div>
+
+            <div id="thumbs" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+            <div id="img-warning" class="hidden text-[11px] leading-relaxed text-amber-300 bg-amber-950/40 border border-amber-500/30 rounded-lg p-2.5"></div>
+        </div>
+
+        <!-- ТЕКСТ -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-3.5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-pink-400">
+                    <span class="material-icons text-xl">edit_note</span>
+                    <h3 class="font-bold text-sm sm:text-base text-white">Текст поста</h3>
+                </div>
+                <span id="caption-counter" class="text-[11px] font-mono text-slate-500">0 / 1024</span>
+            </div>
+
+            <div id="event-row" class="hidden flex-col gap-1">
+                <label class="label">Событие из календаря</label>
+                <select id="event-select" class="field"></select>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="label">Шаблон поста</label>
+                <select id="post-template" class="field">
+                    <option value="">Свободный — поля ниже</option>
+                </select>
+                <p id="post-template-hint" class="text-[11px] text-slate-500"></p>
+            </div>
+
+            <div id="template-fields" class="hidden flex-col gap-3"></div>
+
+            <button type="button" id="build-post-btn" onclick="buildFromTemplate()" class="btn hidden" style="background:#064e3b; border-color:#059669; color:#a7f3d0;">
+                <span class="material-icons text-base">auto_fix_high</span>
+                <span>Собрать пост</span>
+            </button>
+
+            <div id="manual-block" class="flex flex-col gap-3.5">
+            <div class="flex flex-col gap-1">
+                <label class="label">Название турнира</label>
+                <input type="text" id="tpl-name" value="ТРОЙНИЧОК" class="field" list="tournament-list" placeholder="ТРОЙНИЧОК">
+                <datalist id="tournament-list"></datalist>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div class="flex flex-col gap-1">
+                    <label class="label">Номер</label>
+                    <input type="text" id="tpl-episode" value="44" class="field text-center" inputmode="numeric" placeholder="44">
+                </div>
+                <div class="flex flex-col gap-1 col-span-2">
+                    <label class="label">Стадия</label>
+                    <div class="flex gap-2">
+                        <select id="tpl-stage" class="field flex-1"></select>
+                        <button type="button" class="btn btn-ghost shrink-0 px-3" onclick="openStageAdd()" title="Добавить стадию">
+                            <span class="material-icons text-lg">add</span>
+                        </button>
+                        <button type="button" class="btn btn-ghost shrink-0 px-3 text-rose-300" onclick="deleteStage()" title="Удалить стадию">
+                            <span class="material-icons text-lg">remove</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="stage-add-row" class="hidden gap-2">
+                <input type="text" id="stage-add-input" class="field flex-1" placeholder="Например: ЧЕТВЕРТЬФИНАЛ">
+                <button type="button" class="btn btn-ghost shrink-0" onclick="addStage()">Добавить</button>
+                <button type="button" class="btn btn-ghost shrink-0 px-3" onclick="closeStageAdd()">
+                    <span class="material-icons text-lg">close</span>
+                </button>
+            </div>
+
+            <div id="head-preview" class="text-xs font-mono text-amber-300 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 truncate"></div>
+
+            <div id="links-row" class="hidden flex-col gap-1.5">
+                <label class="label">Ссылки из справочника — нажми, чтобы добавить в текст</label>
+                <div id="links-box" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="label">Ссылка на YouTube</label>
+                <input type="url" id="tpl-youtube" class="field font-mono text-xs" inputmode="url" placeholder="https://youtu.be/...">
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="label">Вид ссылки</label>
+                <select id="tpl-link-mode" class="field">
+                    <option value="word">YouTube — кликабельное слово</option>
+                    <option value="full">YouTube: полный URL</option>
+                    <option value="raw">Только URL, без подписи</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="label">Доп. текст</label>
+                <textarea id="tpl-extra" rows="2" class="field resize-y" placeholder="Необязательно"></textarea>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="label">Хэштеги — нажми, чтобы включить</label>
+                <div id="tags-box" class="flex flex-wrap gap-2"></div>
+                <div id="tag-add-row" class="hidden gap-2">
+                    <input type="text" id="tag-add-input" class="field flex-1" placeholder="результаты">
+                    <button type="button" class="btn btn-ghost shrink-0" onclick="addTag()">Добавить</button>
+                    <button type="button" class="btn btn-ghost shrink-0 px-3" onclick="closeTagAdd()">
+                        <span class="material-icons text-lg">close</span>
+                    </button>
+                </div>
+            </div>
+
+            </div><!-- /manual-block -->
+
+            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                    <input type="checkbox" id="opt-html" checked class="rounded accent-amber-500 w-4 h-4">
+                    HTML-разметка
+                </label>
+                <button onclick="rebuildCaption(true)" class="btn btn-ghost text-amber-300">
+                    <span class="material-icons text-base">refresh</span> Пересобрать
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="label">Итоговый текст — можно править</label>
+                <textarea id="caption" rows="6" class="field font-mono text-xs resize-y leading-relaxed"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПРАВАЯ КОЛОНКА -->
+    <div class="xl:col-span-5 flex flex-col gap-4 sm:gap-6">
+
+        <!-- СПРАВОЧНИК (заполняется в календаре) -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-2">
+            <span class="flex items-center gap-2 text-violet-400">
+                <span class="material-icons text-xl">menu_book</span>
+                <span class="font-bold text-sm sm:text-base text-white">Ссылки турниров</span>
+            </span>
+            <p id="ref-note" class="text-[11px] text-slate-500 leading-relaxed">
+                Регламент, таблица и рейтинг заполняются в календаре, во вкладке «Турниры» —
+                нажми там на турнир. Правила и площадки — в блоке «Федерации» под списком.
+                Публикатор их только подставляет.
+            </p>
+            <a href="3.html" class="btn btn-ghost self-start">
+                <span class="material-icons text-base">event</span>
+                <span>Открыть календарь</span>
+            </a>
+        </div>
+
+        <!-- ДАННЫЕ ИЗ ТАБЛИЦЫ -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-3">
+            <button onclick="toggleData()" class="flex items-center justify-between w-full text-left">
+                <span class="flex items-center gap-2 text-emerald-400">
+                    <span class="material-icons text-xl">table_chart</span>
+                    <span class="font-bold text-sm sm:text-base text-white">Данные из таблицы</span>
+                </span>
+                <span id="data-chevron" class="material-icons text-slate-500">expand_more</span>
+            </button>
+
+            <div id="data-body" class="hidden flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <label class="label">Файл Excel — заполняешь его и загружаешь сюда</label>
+                    <input type="file" id="excel-input" accept=".xlsx,.xlsm,.xls" class="hidden">
+                    <button onclick="document.getElementById('excel-input').click()" class="btn" style="background:#064e3b; border-color:#059669; color:#a7f3d0;">
+                        <span class="material-icons text-base">upload_file</span>
+                        <span>Загрузить из Excel</span>
+                    </button>
+                </div>
+
+                <button onclick="downloadDataJs()" class="btn btn-ghost">
+                    <span class="material-icons text-base">download</span>
+                    <span>Скачать data.js для сайта</span>
+                </button>
+
+                <details class="text-[11px] text-slate-500">
+                    <summary class="cursor-pointer py-1">Google Таблица — если нужна правка с телефона</summary>
+                    <div class="flex flex-col gap-2 pt-2">
+                        <input type="url" id="sheet-url" class="field font-mono text-xs" inputmode="url"
+                               placeholder="https://docs.google.com/spreadsheets/d/…">
+                        <button onclick="refreshData(true)" class="btn btn-ghost">
+                            <span class="material-icons text-base" id="data-icon">sync</span>
+                            <span>Обновить из таблицы</span>
+                        </button>
+                        <p class="leading-relaxed">Работает только когда страница открыта как сайт. С диска браузер запрещает такие запросы.</p>
+                    </div>
+                </details>
+
+                <div id="data-status" class="text-[11px] text-slate-500 leading-relaxed">
+                    Данные не подключены — все поля заполняются вручную.
+                </div>
+            </div>
+        </div>
+
+        <!-- БОТ И КАНАЛ -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-3">
+            <button onclick="toggleSettings()" class="flex items-center justify-between w-full text-left">
+                <span class="flex items-center gap-2 text-sky-400">
+                    <span class="material-icons text-xl">settings</span>
+                    <span class="font-bold text-sm sm:text-base text-white">Бот и канал</span>
+                </span>
+                <span id="settings-chevron" class="material-icons text-slate-500">expand_less</span>
+            </button>
+
+            <div id="settings-body" class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <label class="label">Токен бота</label>
+                    <div class="flex gap-2">
+                        <input type="password" id="bot-token" class="field font-mono text-xs" placeholder="123456789:AA…" autocomplete="off">
+                        <button onclick="toggleTokenVisibility()" class="btn btn-ghost shrink-0 px-3">
+                            <span class="material-icons text-lg" id="token-eye">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="label">Канал: @имя или -100…</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="chat-id" class="field font-mono text-xs" placeholder="@my_channel" autocomplete="off">
+                        <button onclick="saveChatPreset()" class="btn btn-ghost shrink-0 px-3 text-emerald-400" title="Сохранить канал">
+                            <span class="material-icons text-lg">bookmark_add</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="presets-row" class="hidden flex-col gap-1">
+                    <label class="label">Сохранённые каналы</label>
+                    <div class="flex gap-2">
+                        <select id="chat-presets" onchange="applyChatPreset()" class="field flex-1"></select>
+                        <button onclick="deleteChatPreset()" class="btn btn-ghost shrink-0 px-3 text-rose-400">
+                            <span class="material-icons text-lg">delete</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="testConnection()" class="btn" style="background:#0c4a6e; border-color:#0369a1; color:#bae6fd;">
+                    <span class="material-icons text-base">wifi_tethering</span> Проверить бота и канал
+                </button>
+
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                    Бот должен быть админом канала с правом публикации. Токен хранится только в этом браузере
+                    и уходит напрямую в api.telegram.org — в коде страницы его нет.
+                </p>
+            </div>
+        </div>
+
+        <!-- ПРЕВЬЮ И ОТПРАВКА -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex items-center gap-2 text-emerald-400">
+                <span class="material-icons text-xl">visibility</span>
+                <h3 class="font-bold text-sm sm:text-base text-white">Как будет выглядеть</h3>
+            </div>
+
+            <div class="flex justify-center">
+                <div class="tg-preview">
+                    <img id="preview-img" class="hidden" alt="">
+                    <div id="preview-text" class="tg-text text-slate-500">Текст поста появится здесь…</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5 pt-1">
+                <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer py-1">
+                    <input type="checkbox" id="opt-silent" class="rounded accent-amber-500 w-4 h-4">
+                    Без звука
+                </label>
+                <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer py-1">
+                    <input type="checkbox" id="opt-document" class="rounded accent-amber-500 w-4 h-4">
+                    Файлом, без сжатия Telegram
+                </label>
+                <label class="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer py-1">
+                    <input type="checkbox" id="opt-increment" checked class="rounded accent-amber-500 w-4 h-4">
+                    После отправки +1 к номеру
+                </label>
+            </div>
+
+            <button onclick="publish()" class="btn btn-primary js-send-btn hidden xl:flex">
+                <span class="material-icons text-base js-send-icon">send</span>
+                <span class="js-send-label">Опубликовать</span>
+            </button>
+
+            <button onclick="clearAll()" class="btn btn-ghost">Очистить картинки и текст</button>
+        </div>
+
+        <!-- ЖУРНАЛ -->
+        <div class="card p-4 sm:p-5 flex flex-col gap-2">
+            <div class="flex items-center gap-2 text-slate-400">
+                <span class="material-icons text-lg">receipt_long</span>
+                <h3 class="font-bold text-sm text-white">Журнал</h3>
+            </div>
+            <div id="log" class="max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ЛИПКАЯ КНОПКА (ТЕЛЕФОН) -->
+<div class="sticky-bar">
+    <div class="flex flex-col shrink-0">
+        <span id="sticky-counter" class="text-[10px] font-mono text-slate-500">0 / 1024</span>
+        <span id="sticky-imgs" class="text-[10px] font-mono text-slate-600">0 фото</span>
+    </div>
+    <button onclick="publish()" class="btn btn-primary js-send-btn flex-1">
+        <span class="material-icons text-base js-send-icon">send</span>
+        <span class="js-send-label">Опубликовать</span>
+    </button>
+</div>
+
+<div id="toast-container" class="fixed bottom-24 xl:bottom-5 right-3 xl:right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="data.js" onerror="window.NDROP_DATA_MISSING=true"></script>
+<script src="calendar-data.js" onerror="window.NDROP_CALENDAR_MISSING=true"></script>
+<script src="post-templates.js"></script>
+<script src="data-source.js"></script>
+<script>
+/* =========================================================================
+   Хранилище: localStorage может быть недоступен (приватный режим, жёсткие
+   настройки) — тогда молча работаем в памяти, страница остаётся рабочей.
+   ========================================================================= */
+const memStore = {};
+const store = {
+    get(key, fallback = '') {
+        try { const v = localStorage.getItem(key); return v === null ? (memStore[key] ?? fallback) : v; }
+        catch (e) { return memStore[key] ?? fallback; }
+    },
+    set(key, value) {
+        memStore[key] = value;
+        try { localStorage.setItem(key, value); } catch (e) {}
+    },
+    del(key) {
+        delete memStore[key];
+        try { localStorage.removeItem(key); } catch (e) {}
+    }
+};
+
+const LS = {
+    token: 'ndrop_tg_token',
+    chat: 'ndrop_tg_chat',
+    presets: 'ndrop_tg_presets',
+    name: 'ndrop_tpl_name',
+    episode: 'ndrop_tpl_episode',
+    stage: 'ndrop_tpl_stage',
+    stages: 'ndrop_tpl_stages',
+    tagsList: 'ndrop_tags_list',
+    tagsActive: 'ndrop_tags_active',
+    linkMode: 'ndrop_tpl_linkmode'
+};
+
+/* Передача картинки из генератора: если генератор положит PNG (dataURL) в этот
+   ключ на том же домене, публикатор подхватит её при открытии. */
+const HANDOFF_KEY = 'ndrop_handoff_image';
+const HANDOFF_TIME = 'ndrop_handoff_time';
+
+const DEFAULT_STAGES = ['СЕРИЯ', 'ОТБОР', 'ПОЛУФИНАЛ', 'ФИНАЛ', '— без стадии —'];
+const DEFAULT_TAGS = ['мафия', 'newsdrop', 'результаты', 'трансляция', 'анонс'];
+const NO_STAGE = '— без стадии —';
+const MAX_IMAGES = 10;
+
+let images = [];
+let captionDirty = false;
+
+/* ================================ УТИЛИТЫ ================================ */
+function $(id) { return document.getElementById(id); }
+function $$(sel) { return Array.from(document.querySelectorAll(sel)); }
+
+function escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function stripTags(str) { return String(str || '').replace(/<[^>]*>/g, ''); }
+
+function humanSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function readJson(key, fallback) {
+    try { const v = JSON.parse(store.get(key, '')); return v ?? fallback; }
+    catch (e) { return fallback; }
+}
+function writeJson(key, value) { store.set(key, JSON.stringify(value)); }
+
+function log(message, type = 'info') {
+    const line = document.createElement('div');
+    line.className = 'log-line log-' + type;
+    line.textContent = `[${new Date().toLocaleTimeString('ru-RU')}] ${message}`;
+    $('log').prepend(line);
+}
+
+function toast(message, type = 'info') {
+    const el = document.createElement('div');
+    let cls = 'bg-slate-900/95 border-slate-700/60 text-slate-200', icon = 'info';
+    if (type === 'error') { cls = 'bg-rose-950/95 border-rose-500/40 text-rose-200'; icon = 'error'; }
+    if (type === 'success') { cls = 'bg-emerald-950/95 border-emerald-500/40 text-emerald-200'; icon = 'check_circle'; }
+    el.className = `p-3 rounded-xl shadow-2xl flex items-start gap-2.5 text-xs font-medium border pointer-events-auto transition-opacity duration-300 ${cls}`;
+    el.innerHTML = `<span class="material-icons shrink-0 text-base">${icon}</span><div class="flex-1">${escapeHtml(message)}</div>`;
+    $('toast-container').appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4200);
+}
+
+/* ============================== КАРТИНКИ ================================ */
+function addImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (images.length >= MAX_IMAGES) { toast(`Максимум ${MAX_IMAGES} картинок.`, 'error'); return; }
+
+    const url = URL.createObjectURL(file);
+    const probe = new Image();
+    probe.onload = () => {
+        images.push({
+            blob: file,
+            name: (file.name && file.name !== 'image.png') ? file.name : `newsdrop_${Date.now()}.png`,
+            url, w: probe.naturalWidth, h: probe.naturalHeight
+        });
+        renderThumbs();
+        updatePreview();
+        log(`Картинка ${probe.naturalWidth}×${probe.naturalHeight}, ${humanSize(file.size)}`, 'ok');
+    };
+    probe.onerror = () => toast('Не удалось прочитать картинку.', 'error');
+    probe.src = url;
+}
+
+function removeImage(index) {
+    if (images[index]) URL.revokeObjectURL(images[index].url);
+    images.splice(index, 1);
+    renderThumbs();
+    updatePreview();
+}
+
+function renderThumbs() {
+    const box = $('thumbs');
+    box.innerHTML = '';
+    images.forEach((img, i) => {
+        const div = document.createElement('div');
+        div.className = 'thumb';
+        div.innerHTML = `
+            <img src="${img.url}" alt="">
+            <div class="thumb-idx">${i + 1}</div>
+            <div class="thumb-del"><span class="material-icons text-base">close</span></div>
+            <div class="thumb-bar"><span>${img.w}×${img.h}</span><span>${humanSize(img.blob.size)}</span></div>`;
+        div.querySelector('.thumb-del').addEventListener('click', () => removeImage(i));
+        box.appendChild(div);
+    });
+
+    $('img-count').textContent = `${images.length} / ${MAX_IMAGES}`;
+    $('sticky-imgs').textContent = `${images.length} фото`;
+    checkImageWarnings();
+    updateCounter();
+}
+
+/* Ограничения Telegram проверяем заранее, а не по факту отказа. */
+function checkImageWarnings() {
+    const warn = $('img-warning');
+    const asDocument = $('opt-document').checked;
+    const problems = [];
+
+    images.forEach((img, i) => {
+        const n = i + 1;
+        if (asDocument) return;
+        if (img.blob.size > 10 * 1024 * 1024) {
+            problems.push(`Картинка ${n}: ${humanSize(img.blob.size)} — как фото Telegram берёт до 10 МБ. Включи «Файлом» или уменьши масштаб экспорта.`);
+        }
+        if ((img.w + img.h) > 10000) {
+            problems.push(`Картинка ${n}: ${img.w}×${img.h} — сумма сторон больше 10000, как фото не пройдёт.`);
+        }
+        if (Math.max(img.w / img.h, img.h / img.w) > 20) {
+            problems.push(`Картинка ${n}: слишком вытянутая для фото.`);
+        }
+    });
+
+    if (problems.length) {
+        warn.classList.remove('hidden');
+        warn.innerHTML = problems.map(p => '⚠ ' + escapeHtml(p)).join('<br>');
+    } else {
+        warn.classList.add('hidden');
+        warn.innerHTML = '';
+    }
+}
+
+/* Кнопка «Буфер» — на телефоне Ctrl+V нет, читаем буфер напрямую. */
+async function pasteFromClipboard() {
+    if (!navigator.clipboard || !navigator.clipboard.read) {
+        toast('Браузер не даёт читать буфер. Сохрани картинку и выбери её через «Галерея».', 'error');
+        return;
+    }
+    try {
+        const items = await navigator.clipboard.read();
+        let found = 0;
+        for (const item of items) {
+            const type = item.types.find(t => t.startsWith('image/'));
+            if (!type) continue;
+            const blob = await item.getType(type);
+            addImageFile(new File([blob], `clipboard_${Date.now()}.png`, { type: blob.type }));
+            found++;
+        }
+        if (!found) toast('В буфере нет картинки.', 'error');
+    } catch (e) {
+        toast('Буфер недоступен — разреши доступ или выбери файл через «Галерея».', 'error');
+    }
+}
+
+/* Подхват картинки, переданной генератором. Сначала IndexedDB (туда кладёт
+   publisher-bridge.js — Blob как есть), потом localStorage как запасной путь. */
+function openHandoffDb() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) { reject(new Error('IndexedDB недоступна')); return; }
+        const req = indexedDB.open('ndrop-handoff', 1);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function takeHandoffFromDb() {
+    return openHandoffDb().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction('files', 'readwrite');
+        const storeRef = tx.objectStore('files');
+        const req = storeRef.get('image');
+        req.onsuccess = () => { storeRef.delete('image'); resolve(req.result || null); };
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+    }));
+}
+
+function isFresh(stamp) {
+    return !stamp || (Date.now() - stamp) <= 15 * 60 * 1000; // не старше 15 минут
+}
+
+/* Данные макета, которые генератор кладёт рядом с картинкой: турнир, федерация,
+   победитель. Подставляем их в поля, чтобы не вводить то же самое второй раз. */
+function applyHandoffMeta(meta) {
+    if (!meta || !meta.tournament) return;
+
+    const name = String(meta.tournament).trim();
+    log(`Из генератора: ${name}${meta.federation ? ' · ' + meta.federation : ''}`, 'info');
+
+    const card = window.NDropData ? NDropData.findTournament(name) : null;
+
+    // Если этот турнир есть в календаре — берём ближайшее событие целиком:
+    // номер, стадию, ссылку, правила и регламент.
+    const select = $('calendar-select');
+    let matched = false;
+    if (select && select._rows) {
+        const idx = select._rows.findIndex(row =>
+            String(row.tournament).trim().toLowerCase() === name.toLowerCase() ||
+            String(row.short || '').trim().toLowerCase() === name.toLowerCase());
+        if (idx >= 0) {
+            select.value = String(idx);
+            onCalendarPick();
+            matched = true;
+        }
+    }
+
+    if (!matched) {
+        // Календарного события нет — берём хотя бы карточку турнира.
+        $('tpl-name').value = (card && (card.short || card.name)) || name;
+        if (card && card.tagsList) activateTags(card.tagsList);
+        if (card && !card.isSerial) {
+            renderStages(NO_STAGE);
+            store.set(LS.stage, NO_STAGE);
+            $('tpl-episode').value = '';
+        }
+        renderLinks(card ? { rules: card.rules, regulations: card.regulations } : null);
+    }
+
+    applyStageFromTitle(meta.title, card);
+
+    captionDirty = false;
+    rebuildCaption(true);
+    saveSettings();
+}
+
+/* В генераторе стадия обычно набирается в поле «Главный заголовок» — берём её
+   оттуда. То, что человек только что набрал руками, главнее календаря. */
+const TITLE_NOT_A_STAGE = ['ИТОГИ', 'БАЛЛЫ', 'РЕЗУЛЬТАТЫ', 'ТАБЛИЦА', 'ТУРНИР', 'АНОНС', 'СОСТАВ'];
+
+function applyStageFromTitle(title, card) {
+    const value = String(title || '').trim().toUpperCase();
+    if (!value || value.length > 24) return;
+    if (TITLE_NOT_A_STAGE.includes(value)) return;
+
+    const known = getStages().map(s => s.toUpperCase());
+    const fromCard = (card && card.stagesList ? card.stagesList : []).map(s => s.toUpperCase());
+
+    if (!known.includes(value)) {
+        // Стадия из карточки турнира — доверяем и добавляем в список.
+        // Незнакомое слово добавляем только для серийных турниров.
+        if (!fromCard.includes(value) && !(card && card.isSerial)) return;
+        const list = getStages();
+        list.splice(Math.max(0, list.length - 1), 0, value);
+        writeJson(LS.stages, list);
+    }
+
+    renderStages(value);
+    store.set(LS.stage, value);
+    log(`Стадия из заголовка генератора: ${value}`, 'info');
+}
+
+function takeHandoffMeta() {
+    try {
+        const raw = store.get('ndrop_handoff_meta', '');
+        store.del('ndrop_handoff_meta');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+function takeHandoffFromStorage() {
+    const dataUrl = store.get(HANDOFF_KEY, '');
+    if (!dataUrl || !dataUrl.startsWith('data:image')) return null;
+
+    const stamp = parseInt(store.get(HANDOFF_TIME, '0'), 10) || 0;
+    store.del(HANDOFF_KEY);
+    store.del(HANDOFF_TIME);
+    if (!isFresh(stamp)) return null;
+
+    const [meta, b64] = dataUrl.split(',');
+    const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'image/png';
+    const bytes = atob(b64);
+    const arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+}
+
+async function pickUpHandoff() {
+    let blob = null;
+    let meta = null;
+
+    try {
+        const record = await takeHandoffFromDb();
+        if (record && record.blob && isFresh(record.time)) {
+            blob = record.blob;
+            meta = record.meta || null;
+        }
+    } catch (e) {
+        // IndexedDB может быть отключена — молча идём в запасной путь
+    }
+
+    const storedMeta = takeHandoffMeta();
+    if (!meta) meta = storedMeta;
+
+    if (!blob) {
+        try { blob = takeHandoffFromStorage(); }
+        catch (e) { log('Не удалось разобрать картинку из генератора', 'err'); }
+    }
+
+    if (blob) {
+        addImageFile(new File([blob], `generator_${Date.now()}.png`, { type: blob.type || 'image/png' }));
+        log('Картинка получена из генератора', 'ok');
+    }
+    if (meta && (blob || isFresh(meta.time))) applyHandoffMeta(meta);
+}
+
+/* ============================== СТАДИИ ================================== */
+function getStages() {
+    const list = readJson(LS.stages, null);
+    return Array.isArray(list) && list.length ? list : DEFAULT_STAGES.slice();
+}
+
+function renderStages(selected) {
+    const select = $('tpl-stage');
+    const stages = getStages();
+    const current = selected || store.get(LS.stage, stages[0]);
+    select.innerHTML = '';
+    stages.forEach(stage => {
+        const opt = document.createElement('option');
+        opt.value = stage;
+        opt.textContent = stage;
+        select.appendChild(opt);
+    });
+    select.value = stages.includes(current) ? current : stages[0];
+}
+
+function openStageAdd() {
+    const row = $('stage-add-row');
+    row.classList.remove('hidden');
+    row.classList.add('flex');
+    $('stage-add-input').focus();
+}
+function closeStageAdd() {
+    const row = $('stage-add-row');
+    row.classList.add('hidden');
+    row.classList.remove('flex');
+    $('stage-add-input').value = '';
+}
+function addStage() {
+    const value = $('stage-add-input').value.trim().toUpperCase();
+    if (!value) { toast('Введи название стадии.', 'error'); return; }
+    const stages = getStages();
+    if (!stages.includes(value)) {
+        stages.splice(Math.max(0, stages.length - 1), 0, value); // перед «без стадии»
+        writeJson(LS.stages, stages);
+    }
+    renderStages(value);
+    store.set(LS.stage, value);
+    closeStageAdd();
+    rebuildCaption();
+    toast('Стадия добавлена.', 'success');
+}
+function deleteStage() {
+    const value = $('tpl-stage').value;
+    const stages = getStages();
+    if (stages.length <= 1) { toast('Должна остаться хотя бы одна стадия.', 'error'); return; }
+    const next = stages.filter(s => s !== value);
+    writeJson(LS.stages, next);
+    renderStages(next[0]);
+    store.set(LS.stage, next[0]);
+    rebuildCaption();
+    toast('Стадия удалена.', 'info');
+}
+
+/* ============================== ХЭШТЕГИ ================================= */
+function getTags() {
+    const list = readJson(LS.tagsList, null);
+    return Array.isArray(list) && list.length ? list : DEFAULT_TAGS.slice();
+}
+function getActiveTags() {
+    const list = readJson(LS.tagsActive, null);
+    return Array.isArray(list) ? list : [];
+}
+
+function renderTags() {
+    const box = $('tags-box');
+    const tags = getTags();
+    const active = getActiveTags();
+    box.innerHTML = '';
+
+    tags.forEach(tag => {
+        const chip = document.createElement('div');
+        chip.className = 'chip' + (active.includes(tag) ? ' active' : '');
+        chip.innerHTML = `<span>#${escapeHtml(tag)}</span><span class="chip-x material-icons" style="font-size:15px">close</span>`;
+        chip.querySelector('span:first-child').addEventListener('click', () => toggleTag(tag));
+        chip.querySelector('.chip-x').addEventListener('click', e => { e.stopPropagation(); deleteTag(tag); });
+        box.appendChild(chip);
+    });
+
+    const add = document.createElement('div');
+    add.className = 'chip chip-add';
+    add.innerHTML = `<span class="material-icons" style="font-size:16px">add</span><span>тег</span>`;
+    add.addEventListener('click', openTagAdd);
+    box.appendChild(add);
+}
+
+function toggleTag(tag) {
+    const active = getActiveTags();
+    const next = active.includes(tag) ? active.filter(t => t !== tag) : active.concat(tag);
+    writeJson(LS.tagsActive, next);
+    renderTags();
+    rebuildCaption();
+}
+
+function deleteTag(tag) {
+    writeJson(LS.tagsList, getTags().filter(t => t !== tag));
+    writeJson(LS.tagsActive, getActiveTags().filter(t => t !== tag));
+    renderTags();
+    rebuildCaption();
+}
+
+function openTagAdd() {
+    const row = $('tag-add-row');
+    row.classList.remove('hidden');
+    row.classList.add('flex');
+    $('tag-add-input').focus();
+}
+function closeTagAdd() {
+    const row = $('tag-add-row');
+    row.classList.add('hidden');
+    row.classList.remove('flex');
+    $('tag-add-input').value = '';
+}
+function addTag() {
+    const value = $('tag-add-input').value.trim().replace(/^#+/, '').replace(/\s+/g, '_');
+    if (!value) { toast('Введи название тега.', 'error'); return; }
+    const tags = getTags();
+    if (!tags.includes(value)) { tags.push(value); writeJson(LS.tagsList, tags); }
+    const active = getActiveTags();
+    if (!active.includes(value)) { active.push(value); writeJson(LS.tagsActive, active); }
+    renderTags();
+    closeTagAdd();
+    rebuildCaption();
+}
+
+/* ============================ СБОРКА ТЕКСТА ============================= */
+function buildHead() {
+    const name = $('tpl-name').value.trim();
+    const episode = $('tpl-episode').value.trim();
+    const stage = $('tpl-stage').value === NO_STAGE ? '' : $('tpl-stage').value;
+
+    // ТРОЙНИЧОК | 44 ФИНАЛ
+    const right = [episode, stage].filter(Boolean).join(' ');
+    return [name, right].filter(Boolean).join(' | ');
+}
+
+function rebuildCaption(force = false) {
+    const head = buildHead();
+    $('head-preview').textContent = head || 'заголовок пуст';
+
+    if (captionDirty && !force) { updateCounter(); return; }
+
+    const html = $('opt-html').checked;
+    const youtube = $('tpl-youtube').value.trim();
+    const linkMode = $('tpl-link-mode').value;
+    const extra = $('tpl-extra').value.trim();
+    const tags = getActiveTags().map(t => '#' + t).join(' ');
+
+    const parts = [];
+    if (head) parts.push(html ? `<b>${escapeHtml(head)}</b>` : head);
+
+    if (youtube) {
+        if (linkMode === 'raw') {
+            parts.push(youtube);
+        } else if (linkMode === 'full') {
+            parts.push(html ? `YouTube: <a href="${escapeHtml(youtube)}">${escapeHtml(youtube)}</a>` : `YouTube: ${youtube}`);
+        } else {
+            parts.push(html ? `<a href="${escapeHtml(youtube)}">YouTube</a>` : `YouTube: ${youtube}`);
+        }
+    }
+
+    if (extra) parts.push(html ? escapeHtml(extra) : extra);
+    if (tags) parts.push(tags);
+
+    $('caption').value = parts.join('\n\n');
+    updatePreview();
+}
+
+function updateCounter() {
+    const raw = $('caption').value;
+    const plain = $('opt-html').checked ? stripTags(raw) : raw;
+    const limit = images.length > 0 ? 1024 : 4096;
+    const text = `${plain.length} / ${limit}`;
+    const over = plain.length > limit;
+
+    $('caption-counter').textContent = text;
+    $('caption-counter').className = over
+        ? 'text-[11px] font-mono text-rose-400 font-bold'
+        : 'text-[11px] font-mono text-slate-500';
+    $('sticky-counter').textContent = text;
+    $('sticky-counter').className = over
+        ? 'text-[10px] font-mono text-rose-400 font-bold'
+        : 'text-[10px] font-mono text-slate-500';
+}
+
+function updatePreview() {
+    const img = $('preview-img');
+    if (images.length) {
+        img.src = images[0].url;
+        img.classList.remove('hidden');
+    } else {
+        img.classList.add('hidden');
+        img.removeAttribute('src');
+    }
+
+    const text = $('caption').value;
+    const box = $('preview-text');
+    if (!text.trim()) {
+        box.className = 'tg-text text-slate-500';
+        box.textContent = 'Текст поста появится здесь…';
+    } else {
+        box.className = 'tg-text';
+        if ($('opt-html').checked) {
+            box.innerHTML = text.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/ on\w+="[^"]*"/gi, '');
+        } else {
+            box.textContent = text;
+        }
+    }
+    updateCounter();
+}
+
+/* ========================== TELEGRAM BOT API ============================ */
+function apiUrl(method) {
+    return `https://api.telegram.org/bot${$('bot-token').value.trim()}/${method}`;
+}
+
+function humanError(description = '') {
+    const d = String(description).toLowerCase();
+    if (d.includes('unauthorized')) return 'Неверный токен бота.';
+    if (d.includes('chat not found')) return 'Канал не найден. Для приватного нужен числовой id вида -100… , и бот должен быть админом.';
+    if (d.includes('not enough rights') || d.includes('chat_write_forbidden') || d.includes('need administrator')) {
+        return 'У бота нет прав на публикацию — сделай его админом канала.';
+    }
+    if (d.includes('caption is too long')) return 'Подпись длиннее 1024 символов — сократи текст.';
+    if (d.includes('dimensions')) return 'Telegram не принял размеры картинки — отправь файлом или уменьши масштаб.';
+    if (d.includes('too many requests') || d.includes('retry after')) return 'Слишком часто — Telegram просит подождать.';
+    return description || 'Неизвестная ошибка';
+}
+
+async function callApi(method, formData) {
+    let response;
+    try {
+        response = await fetch(apiUrl(method), { method: 'POST', body: formData });
+    } catch (netErr) {
+        log('Сеть: ' + netErr.message, 'err');
+        throw new Error('Запрос не дошёл до api.telegram.org — похоже на блокировку провайдером, VPN, расширением или антивирусом.');
+    }
+
+    const raw = await response.text();
+    try {
+        const json = JSON.parse(raw);
+        if (!json.ok) throw new Error(humanError(json.description));
+        return json.result;
+    } catch (parseErr) {
+        if (parseErr instanceof SyntaxError) {
+            const head = raw.replace(/\s+/g, ' ').slice(0, 140) || '(пусто)';
+            log(`HTTP ${response.status}, не-JSON: ${head}`, 'err');
+            throw new Error(`Telegram вернул не JSON (HTTP ${response.status}) — запрос перехватывает провайдер или расширение. Начало ответа: ${head}`);
+        }
+        throw parseErr;
+    }
+}
+
+async function testConnection() {
+    const badge = $('conn-badge');
+    if (!$('bot-token').value.trim()) { toast('Введи токен бота.', 'error'); return; }
+
+    badge.textContent = 'Проверяю…';
+    badge.className = 'text-[10px] sm:text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-sky-700 bg-sky-950 text-sky-300 shrink-0 max-w-[45%] truncate';
+
+    try {
+        const me = await callApi('getMe', new FormData());
+        log(`Бот: @${me.username}`, 'ok');
+
+        const chat = $('chat-id').value.trim();
+        if (chat) {
+            const fd = new FormData();
+            fd.append('chat_id', chat);
+            const info = await callApi('getChat', fd);
+            const title = info.title || info.username || chat;
+            badge.textContent = `✓ ${title}`;
+            badge.className = 'text-[10px] sm:text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-emerald-600 bg-emerald-950 text-emerald-300 shrink-0 max-w-[45%] truncate';
+            log(`Канал доступен: ${title} (id ${info.id})`, 'ok');
+            toast('Бот и канал на связи.', 'success');
+        } else {
+            badge.textContent = `@${me.username}`;
+            badge.className = 'text-[10px] sm:text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-amber-600 bg-amber-950 text-amber-300 shrink-0 max-w-[45%] truncate';
+            toast('Бот на связи. Укажи канал.', 'success');
+        }
+        saveSettings();
+    } catch (e) {
+        badge.textContent = 'Ошибка';
+        badge.className = 'text-[10px] sm:text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-rose-600 bg-rose-950 text-rose-300 shrink-0 max-w-[45%] truncate';
+        log('Проверка не прошла: ' + e.message, 'err');
+        toast(e.message, 'error');
+    }
+}
+
+async function publish() {
+    const chat = $('chat-id').value.trim();
+    const caption = $('caption').value;
+    const html = $('opt-html').checked;
+    const silent = $('opt-silent').checked;
+    const asDocument = $('opt-document').checked;
+
+    if (!$('bot-token').value.trim()) { toast('Введи токен бота.', 'error'); return; }
+    if (!chat) { toast('Укажи канал.', 'error'); return; }
+    if (!images.length && !caption.trim()) { toast('Нет ни картинки, ни текста.', 'error'); return; }
+
+    const plainLength = (html ? stripTags(caption) : caption).length;
+    const limit = images.length ? 1024 : 4096;
+    if (plainLength > limit) { toast(`Текст ${plainLength} при лимите ${limit}.`, 'error'); return; }
+
+    setSending(true);
+    try {
+        let result;
+
+        if (!images.length) {
+            const fd = new FormData();
+            fd.append('chat_id', chat);
+            fd.append('text', caption);
+            if (html) fd.append('parse_mode', 'HTML');
+            if (silent) fd.append('disable_notification', 'true');
+            result = await callApi('sendMessage', fd);
+
+        } else if (images.length === 1) {
+            const fd = new FormData();
+            fd.append('chat_id', chat);
+            fd.append(asDocument ? 'document' : 'photo', images[0].blob, images[0].name);
+            if (caption.trim()) {
+                fd.append('caption', caption);
+                if (html) fd.append('parse_mode', 'HTML');
+            }
+            if (silent) fd.append('disable_notification', 'true');
+            result = await callApi(asDocument ? 'sendDocument' : 'sendPhoto', fd);
+
+        } else {
+            const fd = new FormData();
+            fd.append('chat_id', chat);
+            const media = images.map((img, i) => {
+                const key = `file${i}`;
+                fd.append(key, img.blob, img.name);
+                const item = { type: asDocument ? 'document' : 'photo', media: `attach://${key}` };
+                if (i === 0 && caption.trim()) {
+                    item.caption = caption;
+                    if (html) item.parse_mode = 'HTML';
+                }
+                return item;
+            });
+            fd.append('media', JSON.stringify(media));
+            if (silent) fd.append('disable_notification', 'true');
+            const group = await callApi('sendMediaGroup', fd);
+            result = Array.isArray(group) ? group[0] : group;
+        }
+
+        const messageId = result && result.message_id;
+        const username = result && result.chat && result.chat.username;
+        const link = username && messageId ? `https://t.me/${username}/${messageId}` : null;
+
+        log(`Опубликовано${messageId ? ' #' + messageId : ''}${link ? ' → ' + link : ''}`, 'ok');
+        toast('Пост опубликован.', 'success');
+
+        if ($('opt-increment').checked) {
+            const field = $('tpl-episode');
+            const n = parseInt(field.value, 10);
+            if (Number.isFinite(n)) {
+                field.value = String(n + 1);
+                store.set(LS.episode, field.value);
+                captionDirty = false;
+                rebuildCaption(true);
+                log(`Номер увеличен до ${n + 1}`, 'info');
+            }
+        }
+        saveSettings();
+    } catch (e) {
+        log('Ошибка публикации: ' + e.message, 'err');
+        toast(e.message, 'error');
+    } finally {
+        setSending(false);
+    }
+}
+
+function setSending(active) {
+    $$('.js-send-btn').forEach(btn => { btn.disabled = active; });
+    $$('.js-send-label').forEach(el => { el.textContent = active ? 'Отправляю…' : 'Опубликовать'; });
+    $$('.js-send-icon').forEach(el => {
+        el.textContent = active ? 'hourglass_top' : 'send';
+        el.className = active ? 'material-icons text-base js-send-icon animate-spin' : 'material-icons text-base js-send-icon';
+    });
+}
+
+/* ====================== НАСТРОЙКИ И ПРЕСЕТЫ КАНАЛОВ ===================== */
+function saveSettings() {
+    store.set(LS.token, $('bot-token').value.trim());
+    store.set(LS.chat, $('chat-id').value.trim());
+    store.set(LS.name, $('tpl-name').value);
+    store.set(LS.episode, $('tpl-episode').value);
+    store.set(LS.stage, $('tpl-stage').value);
+    store.set(LS.linkMode, $('tpl-link-mode').value);
+}
+
+function getPresets() { return readJson(LS.presets, []); }
+
+function renderPresets() {
+    const presets = getPresets();
+    const row = $('presets-row');
+    const select = $('chat-presets');
+    if (!presets.length) { row.classList.add('hidden'); row.classList.remove('flex'); return; }
+    row.classList.remove('hidden');
+    row.classList.add('flex');
+    select.innerHTML = '';
+    presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p; opt.textContent = p;
+        select.appendChild(opt);
+    });
+    const current = $('chat-id').value.trim();
+    if (presets.includes(current)) select.value = current;
+}
+
+function saveChatPreset() {
+    const chat = $('chat-id').value.trim();
+    if (!chat) { toast('Поле канала пустое.', 'error'); return; }
+    const presets = getPresets();
+    if (!presets.includes(chat)) { presets.push(chat); writeJson(LS.presets, presets); toast('Канал сохранён.', 'success'); }
+    renderPresets();
+}
+function applyChatPreset() { $('chat-id').value = $('chat-presets').value; saveSettings(); }
+function deleteChatPreset() {
+    writeJson(LS.presets, getPresets().filter(p => p !== $('chat-presets').value));
+    renderPresets();
+    toast('Канал удалён из списка.', 'info');
+}
+
+function toggleTokenVisibility() {
+    const field = $('bot-token');
+    const hidden = field.type === 'password';
+    field.type = hidden ? 'text' : 'password';
+    $('token-eye').textContent = hidden ? 'visibility_off' : 'visibility';
+}
+
+function toggleSettings() {
+    const hidden = $('settings-body').classList.toggle('hidden');
+    $('settings-chevron').textContent = hidden ? 'expand_more' : 'expand_less';
+}
+
+function clearAll() {
+    images.forEach(img => URL.revokeObjectURL(img.url));
+    images = [];
+    $('tpl-youtube').value = '';
+    $('tpl-extra').value = '';
+    captionDirty = false;
+    renderThumbs();
+    rebuildCaption(true);
+    log('Очищено', 'info');
+}
+
+/* ================= КАЛЕНДАРЬ 3.html, ШАБЛОНЫ И СПРАВОЧНИК ================ */
+/* Турниры и даты читаются из календаря 3.html — свой список не заводим. */
+
+const LS_TPL = 'ndrop_template_values';
+
+function renderEventSelect() {
+    const select = $('event-select');
+    if (!select || !window.NDropPosts) return;
+    const events = NDropPosts.getEvents();
+
+    select.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '— без привязки к событию —';
+    select.appendChild(blank);
+
+    events.forEach((ev, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `${ev.dateDisplay}${ev.time ? ' ' + ev.time : ''} · ${ev.tournament} · ${ev.federation}`;
+        select.appendChild(opt);
+    });
+    select._events = events;
+    showRow('event-row', events.length > 0);
+}
+
+function currentEvent() {
+    const select = $('event-select');
+    if (!select || !select._events) return null;
+    const idx = parseInt(select.value, 10);
+    return Number.isFinite(idx) ? (select._events[idx] || null) : null;
+}
+
+function renderTemplateSelect() {
+    const select = $('post-template');
+    if (!select || !window.NDropPosts) return;
+    NDropPosts.TEMPLATES.forEach(tpl => {
+        const opt = document.createElement('option');
+        opt.value = tpl.id;
+        opt.textContent = tpl.name;
+        select.appendChild(opt);
+    });
+}
+
+/* Поля рисуются по описанию шаблона: у «Прямого эфира» свои, у «Итогов» свои. */
+function renderTemplateFields() {
+    const id = $('post-template').value;
+    const tpl = window.NDropPosts ? NDropPosts.getTemplate(id) : null;
+    const box = $('template-fields');
+    const manual = $('manual-block');
+
+    $('post-template-hint').textContent = tpl ? tpl.hint : 'Поля ниже, текст собирается как раньше';
+    box.innerHTML = '';
+
+    if (!tpl) {
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+        $('build-post-btn').classList.add('hidden');
+        manual.classList.remove('hidden');
+        return;
+    }
+
+    manual.classList.add('hidden');
+    box.classList.remove('hidden');
+    box.classList.add('flex');
+    $('build-post-btn').classList.remove('hidden');
+    $('build-post-btn').classList.add('flex');
+
+    const saved = readJson(LS_TPL, {})[id] || {};
+    tpl.fields.forEach(field => {
+        const wrap = document.createElement('div');
+        wrap.className = 'flex flex-col gap-1';
+
+        if (field.type === 'stage') {
+            wrap.innerHTML = `<label class="label">${escapeHtml(field.label)}</label>
+                <div class="flex gap-2">
+                    <input type="text" class="field js-tpl-field flex-1" data-key="${field.key}"
+                           placeholder="${escapeHtml(field.placeholder || '')}">
+                    <select class="field js-stage-pick" style="flex:0 0 42%"></select>
+                    <button type="button" class="btn js-stage-add" style="padding:0 12px" title="Добавить стадию в список">
+                        <span class="material-icons" style="font-size:18px">add</span>
+                    </button>
+                </div>`;
+            const input = wrap.querySelector('input');
+            const pick = wrap.querySelector('.js-stage-pick');
+            fillStagePicker(pick);
+            // Список общий с ручным блоком: что добавлено здесь, видно и там.
+            pick.addEventListener('change', () => {
+                if (!pick.value) return;
+                input.value = pick.value === NO_STAGE ? '' : pick.value;
+                pick.value = '';
+            });
+            wrap.querySelector('.js-stage-add').addEventListener('click', () => {
+                const value = input.value.trim().toUpperCase();
+                if (!value) { toast('Впиши стадию, потом нажми +.', 'error'); return; }
+                const stages = getStages();
+                if (!stages.includes(value)) {
+                    stages.splice(Math.max(0, stages.length - 1), 0, value);
+                    writeJson(LS.stages, stages);
+                    renderStages($('tpl-stage').value);
+                    toast('Стадия добавлена в список.', 'success');
+                } else {
+                    toast('Такая стадия уже есть.', 'info');
+                }
+                input.value = value;
+                fillStagePicker(pick);
+            });
+            if (saved[field.key]) input.value = saved[field.key];
+            box.appendChild(wrap);
+            return;
+        }
+
+        wrap.innerHTML = `<label class="label">${escapeHtml(field.label)}</label>
+            <input type="text" class="field js-tpl-field" data-key="${field.key}"
+                   placeholder="${escapeHtml(field.placeholder || '')}">`;
+        const input = wrap.querySelector('input');
+        // Судьи и комментатор обычно те же — подставляем прошлые значения.
+        // Ссылку на эфир не восстанавливаем: она каждый раз новая.
+        if (field.key !== 'youtube' && saved[field.key]) input.value = saved[field.key];
+        box.appendChild(wrap);
+    });
+}
+
+/* Выпадающий список стадий внутри полей шаблона. Берёт тот же список, что и
+   ручной блок, поэтому стадии не расходятся между режимами. */
+function fillStagePicker(select) {
+    select.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '— выбрать —';
+    select.appendChild(blank);
+    getStages().filter(s => s !== NO_STAGE).forEach(stage => {
+        const opt = document.createElement('option');
+        opt.value = stage;
+        opt.textContent = stage;
+        select.appendChild(opt);
+    });
+    select.value = '';
+}
+
+function templateValues() {
+    const values = {};
+    $$('.js-tpl-field').forEach(input => {
+        const v = input.value.trim();
+        if (v) values[input.dataset.key] = v;
+    });
+    return values;
+}
+
+function buildFromTemplate() {
+    const id = $('post-template').value;
+    if (!id || !window.NDropPosts) return;
+
+    const event = currentEvent();
+    const values = templateValues();
+
+    if (!event) {
+        toast('Выбери событие из календаря — из него берутся турнир и федерация.', 'error');
+        return;
+    }
+
+    const text = NDropPosts.buildPost(id, event, values);
+    if (!text) { toast('Шаблон не собрался.', 'error'); return; }
+
+    if (!$('opt-html').checked) {
+        $('opt-html').checked = true;
+        toast('Для шаблонов нужна HTML-разметка — включил её.', 'info');
+    }
+
+    $('caption').value = text;
+    captionDirty = true;
+    updatePreview();
+
+    const all = readJson(LS_TPL, {});
+    all[id] = values;
+    writeJson(LS_TPL, all);
+
+    log(`Пост собран по шаблону «${NDropPosts.getTemplate(id).name}»`, 'ok');
+}
+
+/* Справочник переехал в календарь 3.html: там он рядом с турнирами, которые
+   его и порождают. Здесь остались только чтение и подстановка. */
+
+/* ====================== ДАННЫЕ ИЗ GOOGLE ТАБЛИЦЫ ======================== */
+/* Таблица — помощник, а не обязательное условие: если она не подключена или
+   недоступна, все поля остаются с ручным вводом и инструмент работает как был. */
+
+function toggleData() {
+    const hidden = $('data-body').classList.toggle('hidden');
+    $('data-chevron').textContent = hidden ? 'expand_more' : 'expand_less';
+}
+
+function showRow(id, visible) {
+    const row = $(id);
+    if (!row) return;
+    row.classList.toggle('hidden', !visible);
+    row.classList.toggle('flex', visible);
+}
+
+function renderDataUi(state) {
+    // Справочник турниров → подсказки в поле названия (ручной ввод сохраняется)
+    const datalist = $('tournament-list');
+    datalist.innerHTML = '';
+    state.tournaments.forEach(row => {
+        const opt = document.createElement('option');
+        opt.value = row.name;
+        datalist.appendChild(opt);
+    });
+
+    // Календарь и шаблоны из таблицы отключены: расписание берётся из
+    // календаря 3.html, шаблоны прописаны в post-templates.js.
+    const upcoming = window.NDropData ? NDropData.upcoming(30) : [];
+    const calendarSelect = $('calendar-select');
+    if (calendarSelect) {
+    calendarSelect.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '— выбрать вручную —';
+    calendarSelect.appendChild(blank);
+    upcoming.forEach((row, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        const parts = [row.dateDisplay, row.tournament].filter(Boolean);
+        if (row.stage) parts.push(row.stage);
+        opt.textContent = parts.join(' · ');
+        calendarSelect.appendChild(opt);
+    });
+    calendarSelect._rows = upcoming;
+    showRow('calendar-row', upcoming.length > 0);
+    }
+
+    // Статус
+    const status = $('data-status');
+    const SOURCES = { 'data.js': 'файл data.js', excel: 'файл Excel', sheet: 'Google Таблица', cache: 'сохранённая копия' };
+    const total = state.tournaments.length + state.calendar.length + state.templates.length + state.players.length;
+
+    if (!total && !NDropData.getSheetUrl()) {
+        status.innerHTML = 'Данные не подключены — все поля заполняются вручную.';
+        status.className = 'text-[11px] text-slate-500 leading-relaxed';
+        return;
+    }
+    if (total && (!state.errors || !state.errors.length)) {
+        const when = state.updatedAt ? new Date(state.updatedAt).toLocaleTimeString('ru-RU') : '—';
+        const parts = [`турниров ${state.tournaments.length}`, `в календаре ${state.calendar.length}`];
+        if (state.templates.length) parts.push(`шаблонов ${state.templates.length}`);
+        if (state.players.length) parts.push(`игроков ${state.players.length}`);
+        status.innerHTML = `Источник: ${SOURCES[state.source] || 'кэш'} · ${parts.join(', ')} · ${when}`;
+        status.className = 'text-[11px] text-emerald-400 leading-relaxed';
+        return;
+    }
+    if (state.errors && state.errors.length) {
+        status.innerHTML = state.errors.map(e => '⚠ ' + escapeHtml(e)).join('<br>');
+        status.className = 'text-[11px] text-amber-300 leading-relaxed';
+        return;
+    }
+    const when = state.updatedAt ? new Date(state.updatedAt).toLocaleTimeString('ru-RU') : '—';
+    status.innerHTML = `Загружено: турниров ${state.tournaments.length}, в календаре ${state.calendar.length}, ` +
+                       `шаблонов ${state.templates.length}, игроков ${state.players.length} · обновлено ${when}`;
+    status.className = 'text-[11px] text-emerald-400 leading-relaxed';
+}
+
+function refreshData(manual) {
+    if (!window.NDropData) return Promise.resolve();
+
+    const url = $('sheet-url').value.trim();
+    NDropData.setSheetUrl(url);
+
+    if (!url) {
+        renderDataUi(NDropData.state);
+        if (manual) toast('Вставь ссылку на таблицу.', 'error');
+        return Promise.resolve();
+    }
+
+    const icon = $('data-icon');
+    icon.className = 'material-icons text-base animate-spin';
+
+    return NDropData.load().then(state => {
+        renderDataUi(state);
+        if (state.errors.length) {
+            log('Таблица: ' + state.errors.join(' | '), 'err');
+            if (manual) toast(state.errors[0], 'error');
+        } else {
+            log(`Таблица обновлена: ${state.calendar.length} событий, ${state.templates.length} шаблонов`, 'ok');
+            if (manual) toast('Данные обновлены.', 'success');
+        }
+    }).catch(e => {
+        log('Таблица: ' + e.message, 'err');
+        if (manual) toast('Не удалось прочитать таблицу: ' + e.message, 'error');
+    }).then(() => {
+        icon.className = 'material-icons text-base';
+    });
+}
+
+/* Excel читается прямо в браузере: файл никуда не уходит, интернет не нужен. */
+function loadExcel(file) {
+    if (!file || !window.NDropData) return;
+    NDropData.loadWorkbook(file).then(state => {
+        renderDataUi(state);
+        if (state.errors.length) {
+            log('Excel: ' + state.errors.join(' | '), 'err');
+            toast(state.errors[0], 'error');
+        } else {
+            log(`Excel загружен: ${state.tournaments.length} турниров, ${state.calendar.length} событий`, 'ok');
+            toast('Данные из Excel загружены.', 'success');
+        }
+    }).catch(e => {
+        log('Excel: ' + e.message, 'err');
+        toast(e.message, 'error');
+    });
+}
+
+/* Выгружает данные одним файлом для сайта — он читается с любого устройства. */
+function downloadDataJs() {
+    if (!window.NDropData) return;
+    const state = NDropData.state;
+    if (!state.tournaments.length && !state.calendar.length) {
+        toast('Сначала загрузи данные из Excel.', 'error');
+        return;
+    }
+    const blob = new Blob([NDropData.toDataJs()], { type: 'application/javascript;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'data.js';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    log('Файл data.js выгружен', 'ok');
+    toast('data.js скачан — положи его рядом со страницами сайта.', 'success');
+}
+
+/* Добавляет тег в общий список и включает его. */
+function activateTags(tags) {
+    if (!tags || !tags.length) return;
+    const list = getTags();
+    const active = getActiveTags();
+    tags.forEach(tag => {
+        if (!list.includes(tag)) list.push(tag);
+        if (!active.includes(tag)) active.push(tag);
+    });
+    writeJson(LS.tagsList, list);
+    writeJson(LS.tagsActive, active);
+    renderTags();
+}
+
+/* Ссылки на правила и регламент закреплены за турниром и не обязательны.
+   Показываем их отдельной строкой: иначе про них можно узнать, только заглянув
+   в шаблон поста, где стоит {регламент}. */
+let currentLinks = { rules: '', regulations: '' };
+
+function renderLinkChips(items) {
+    const box = $('links-box');
+    box.innerHTML = '';
+
+    items = (items || []).filter(item => item && item.url);
+    showRow('links-row', items.length > 0);
+    if (!items.length) return;
+
+    items.forEach(item => {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.innerHTML = `<span class="material-icons" style="font-size:15px">link</span><span>${escapeHtml(item.label)}</span>`;
+        chip.title = item.url;
+        chip.addEventListener('click', () => appendLink(item.label, item.url));
+        box.appendChild(chip);
+    });
+}
+
+/* Старый вызов из таблицы — оставлен, чтобы ничего не отвалилось. */
+function renderLinks(links) {
+    currentLinks = { rules: (links && links.rules) || '', regulations: (links && links.regulations) || '' };
+    renderLinkChips([
+        { label: 'Правила', url: currentLinks.rules },
+        { label: 'Регламент', url: currentLinks.regulations }
+    ]);
+}
+
+/* Ссылки выбранного события: регламент, таблица и рейтинг закреплены за
+   турниром, правила — за федерацией. Всё берётся из Справочника, поэтому
+   в ручном режиме их не надо вставлять руками. */
+/* Номер серии из календаря. Как и с датой: подставляем, пока человек не
+   вписал своё — тогда его значение главнее и смена события его не трёт. */
+let episodeEdited = false;
+
+function applyEventEpisode() {
+    const ev = currentEvent();
+    const field = $('tpl-episode');
+    if (!field || !ev || episodeEdited) return;
+    if (ev.seriesNumber) {
+        field.value = ev.seriesNumber;
+        store.set(LS.episode, field.value);
+        rebuildCaption();
+    }
+}
+
+function renderEventLinks() {
+    const ev = currentEvent();
+    if (!ev || !window.NDropPosts) { renderLinkChips([]); return; }
+
+    const t = NDropPosts.getTournamentRef(ev.tournamentId);
+    const f = NDropPosts.getFederationRef(ev.fed);
+    renderLinkChips([
+        { label: 'Регламент', url: t.reglament },
+        { label: 'Правила', url: f.rules },
+        { label: 'Таблица', url: t.table },
+        { label: 'Рейтинг', url: t.rating },
+        { label: 'YouTube', url: f.youtube },
+        { label: 'RuTube', url: f.rutube },
+        { label: 'VK Видео', url: f.vk },
+        { label: 'Twitch', url: f.twitch }
+    ]);
+}
+
+function appendLink(label, url) {
+    const field = $('caption');
+    const html = $('opt-html').checked;
+    // В HTML-режиме — кликабельное слово, как в реальных постах канала.
+    const line = html
+        ? `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`
+        : `${label}: ${url}`;
+
+    // Ищем по сырому тексту: адрес теперь живёт в href, а не в подписи ссылки.
+    if (field.value.includes(url)) { toast('Эта ссылка уже в тексте.', 'info'); return; }
+
+    field.value = (field.value.trim() ? field.value.replace(/\s*$/, '') + '\n\n' : '') + line;
+    captionDirty = true;
+    updatePreview();
+    toast(`${label} добавлены в текст.`, 'success');
+}
+
+function currentCalendarRow() {
+    const select = $('calendar-select');
+    if (!select || !select._rows) return null;
+    const idx = parseInt(select.value, 10);
+    return Number.isFinite(idx) ? (select._rows[idx] || null) : null;
+}
+
+function onCalendarPick() {
+    const row = currentCalendarRow();
+    if (!row) return;
+
+    $('tpl-name').value = row.short || row.tournament || $('tpl-name').value;
+    $('tpl-episode').value = row.number || '';
+    if (row.youtube) $('tpl-youtube').value = row.youtube;
+
+    // Стадии есть только у серийных турниров. Оупен — одно событие без стадии,
+    // и номер у него обычно пустой.
+    const stages = getStages();
+    let changed = false;
+    (row.stagesList || []).forEach(stage => {
+        if (stage && !stages.includes(stage)) {
+            stages.splice(Math.max(0, stages.length - 1), 0, stage);
+            changed = true;
+        }
+    });
+    if (changed) writeJson(LS.stages, stages);
+
+    if (row.isSerial && row.stage) {
+        const stage = row.stage.toUpperCase();
+        if (!getStages().includes(stage)) {
+            const list = getStages();
+            list.splice(Math.max(0, list.length - 1), 0, stage);
+            writeJson(LS.stages, list);
+        }
+        renderStages(stage);
+        store.set(LS.stage, stage);
+    } else {
+        renderStages(NO_STAGE);
+        store.set(LS.stage, NO_STAGE);
+    }
+
+    if (row.tagsList && row.tagsList.length) activateTags(row.tagsList);
+    renderLinks({ rules: row.rules, regulations: row.regulations });
+
+    captionDirty = false;
+    rebuildCaption(true);
+    saveSettings();
+    log(`Из календаря: ${row.tournament || '—'} ${row.dateDisplay || ''}`, 'info');
+}
+
+function applySelectedTemplate() {
+    const state = NDropData.state;
+    const idx = parseInt($('template-select').value, 10);
+    const template = state.templates[idx];
+    if (!template) { toast('Шаблон не выбран.', 'error'); return; }
+
+    const row = currentCalendarRow() || {};
+    const stage = $('tpl-stage').value === NO_STAGE ? '' : $('tpl-stage').value;
+
+    const text = NDropData.applyTemplate(template.text, {
+        tournament: $('tpl-name').value.trim(),
+        short: row.short || $('tpl-name').value.trim(),
+        number: $('tpl-episode').value.trim(),
+        stage: stage,
+        date: row.dateDisplay || '',
+        time: row.time || '',
+        youtube: $('tpl-youtube').value.trim(),
+        place: row.place || '',
+        federation: row.federation || '',
+        rules: row.rules || '',
+        regulations: row.regulations || ''
+    });
+
+    if (template.tagsList && template.tagsList.length) activateTags(template.tagsList);
+
+    const tags = getActiveTags().map(t => '#' + t).join(' ');
+    const html = $('opt-html').checked;
+    // Если в шаблоне уже есть разметка — оставляем её как есть; если это чистый
+    // текст, в HTML-режиме делаем первую строку заголовком.
+    const hasMarkup = /<\/?(b|i|u|s|a|code|pre|blockquote)\b/i.test(text);
+    let body = text;
+    if (html && !hasMarkup) body = escapeHtml(text).replace(/^(.*)$/m, '<b>$1</b>');
+    $('caption').value = body + (tags ? '\n\n' + tags : '');
+
+    // Шаблон — готовый текст, дальше его правят руками: фиксируем, чтобы
+    // автосборка из полей его не перетёрла.
+    captionDirty = true;
+    updatePreview();
+    toast('Шаблон применён.', 'success');
+}
+
+/* ============================== ЗАПУСК ================================== */
+window.addEventListener('DOMContentLoaded', () => {
+    $('bot-token').value = store.get(LS.token, '');
+    $('chat-id').value = store.get(LS.chat, '');
+    $('tpl-name').value = store.get(LS.name, 'ТРОЙНИЧОК');
+    $('tpl-episode').value = store.get(LS.episode, '44');
+    $('tpl-link-mode').value = store.get(LS.linkMode, 'word');
+
+    renderStages();
+    renderTags();
+    renderPresets();
+    renderThumbs();
+    rebuildCaption(true);
+
+    // Данные из таблицы: сначала мгновенно поднимаем кэш, затем обновляем фоном.
+    // Передачу из генератора разбираем ПОСЛЕ загрузки данных — иначе подставлять
+    // номер, стадию и правила было бы неоткуда.
+    let dataReady = Promise.resolve();
+    if (window.NDropData) {
+        $('sheet-url').value = NDropData.getSheetUrl();
+        // Порядок источников: файл data.js рядом со страницей (работает даже
+        // с диска) → сохранённая копия → Google Таблица, если она настроена.
+        const inline = NDropData.loadInline();
+        if (inline) {
+            renderDataUi(inline);
+            log(`Данные из файла data.js: ${inline.tournaments.length} турниров`, 'ok');
+        } else {
+            const cached = NDropData.loadCache();
+            if (cached.updatedAt) cached.source = 'cache';
+            renderDataUi(cached);
+        }
+        if (NDropData.getSheetUrl()) dataReady = refreshData(false);
+
+        $('sheet-url').addEventListener('change', () => refreshData(true));
+        const calPick = $('calendar-select');
+        if (calPick) calPick.addEventListener('change', onCalendarPick);
+        if (NDropData.getSheetUrl()) toggleData();   // подключена — сворачиваем блок
+    } else {
+        $('data-status').textContent = 'Файл data-source.js не подключён — работает только ручной ввод.';
+    }
+
+    // Шаблоны постов и события календаря
+    if (window.NDropPosts) {
+        renderTemplateSelect();
+        renderEventSelect();
+        renderTemplateFields();
+        renderEventLinks();
+        $('post-template').addEventListener('change', renderTemplateFields);
+        $('event-select').addEventListener('change', () => {
+            renderEventLinks();
+            applyEventEpisode();
+        });
+        $('tpl-episode').addEventListener('input', () => { episodeEdited = true; });
+    }
+
+    dataReady.then(pickUpHandoff);
+
+    // Настройки сворачиваем, если бот уже настроен — на телефоне экономит экран
+    if (store.get(LS.token, '') && store.get(LS.chat, '')) toggleSettings();
+
+    log('Готово к работе.', 'info');
+
+    ['tpl-name', 'tpl-episode', 'tpl-youtube', 'tpl-extra'].forEach(id =>
+        $(id).addEventListener('input', () => { rebuildCaption(); saveSettings(); }));
+    ['tpl-stage', 'tpl-link-mode'].forEach(id =>
+        $(id).addEventListener('change', () => { rebuildCaption(); saveSettings(); }));
+
+    $('opt-html').addEventListener('change', () => { captionDirty = false; rebuildCaption(true); });
+    $('opt-document').addEventListener('change', checkImageWarnings);
+    $('caption').addEventListener('input', () => { captionDirty = true; updatePreview(); });
+    ['bot-token', 'chat-id'].forEach(id => $(id).addEventListener('change', saveSettings));
+
+    $('stage-add-input').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addStage(); } });
+    $('tag-add-input').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } });
+
+    $('excel-input').addEventListener('change', e => {
+        if (e.target.files && e.target.files[0]) loadExcel(e.target.files[0]);
+        e.target.value = '';
+    });
+
+    $('file-input').addEventListener('change', e => {
+        Array.from(e.target.files || []).forEach(addImageFile);
+        e.target.value = '';
+    });
+
+    const intake = $('intake');
+    ['dragenter', 'dragover'].forEach(ev => intake.addEventListener(ev, e => {
+        e.preventDefault(); intake.classList.add('dragover');
+    }));
+    ['dragleave', 'drop'].forEach(ev => intake.addEventListener(ev, e => {
+        e.preventDefault(); intake.classList.remove('dragover');
+    }));
+    intake.addEventListener('drop', e => Array.from(e.dataTransfer.files || []).forEach(addImageFile));
+
+    document.addEventListener('paste', e => {
+        const files = Array.from((e.clipboardData && e.clipboardData.items) || [])
+            .filter(i => i.kind === 'file' && i.type.startsWith('image/'));
+        if (!files.length) return;
+        e.preventDefault();
+        files.forEach(item => addImageFile(item.getAsFile()));
+    });
+
+    window.addEventListener('beforeunload', saveSettings);
+});
+</script>
+</body>
+</html>

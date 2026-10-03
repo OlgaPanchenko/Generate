@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournament Calendar Generator</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#39FF14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NewsDrop">
+<link rel="apple-touch-icon" href="icon.png">
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+    }
+</script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&family=Russo+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #050608; color: #e2e8f0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .font-oswald { font-family: 'Oswald', sans-serif; }
+    .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+    .font-russo { font-family: 'Russo One', sans-serif; }
+
+    /* Экспортируемая карточка — ширина фиксирована, высота автоматическая. */
+    #canvas-holder {
+        position: relative;
+        width: 1000px;
+        box-sizing: border-box;
+        background: radial-gradient(circle at 50% 15%, #1c1c22 0%, #0c0c10 60%, #050506 100%);
+        background-size: cover;
+        background-position: center;
+    }
+    .preview-wrapper { transform-origin: top left; }
+
+    #bg-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.75) 100%);
+        border-radius: inherit;
+        pointer-events: none;
+    }
+
+    #bg-image-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    border-radius: inherit;
+    pointer-events: none;
+}
+/* #bg-overlay { z-index: 1; }      было 0 — поднять на 1 */
+#canvas-content { z-index: 2; }  /* было 1 — поднять на 2 */
+
+    #canvas-content { position: relative; z-index: 1; }
+
+    #canvas-holder .main-text { color: #ffffff; text-shadow: 0 0 18px rgba(255,255,255,0.18), 0 2px 8px rgba(0,0,0,0.9); }
+    #canvas-holder .accent-text { color: #cbd5e1; }
+
+    #logo-slot { width: 150px; display: flex; align-items: center; }
+    #logo-img { max-height: 64px; max-width: 150px; object-fit: contain; display: block; }
+
+    /* ---- Календарная сетка ---- */
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 120px); gap: 12px; justify-content: center; align-items: start; }
+    .cal-head {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        text-align: center;
+        letter-spacing: 0.06em;
+        color: rgba(255,255,255,0.5);
+    }
+
+    .cal-day {
+        box-sizing: border-box;
+        width: 130px;
+        min-height: 110px;
+        border-radius: 13px;
+        overflow: hidden;
+    }
+    .cal-day.blank {
+        background: transparent;
+        border: none;
+    }
+    .cal-day.empty {
+        background: rgba(255,255,255,0.08);
+        border: 1.5px solid rgba(255,255,255,0.22);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Oswald', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        color: #f1f5f9;
+    }
+    .cal-day.filled {
+        background: rgba(255,255,255,0.07);
+        border: 1.5px solid rgba(255,255,255,0.2);
+        display: flex;
+        flex-direction: column;
+        padding: 5px 5px 5px 3px;   /* слева уже: колонка времени прижата к краю */
+        gap: 2px;
+    }
+    .cal-day.filled .num {
+        margin-left: 2px;   /* компенсирует ужатое левое поле ячейки */
+        font-family: 'Oswald', sans-serif;
+        font-weight: 600;
+        font-size: 12px;
+        color: rgba(255,255,255,0.8);
+        margin-bottom: 0;
+        line-height: 1;
+    }
+    /* "Скрыть прошедшие": день с турниром гаснет, но остаётся слабо виден.
+       Меняйте opacity (яркость) и filter: grayscale (насыщенность цвета федерации),
+       чтобы регулировать, насколько тускло выглядят прошедшие дни. */
+    .cal-day.is-past {
+        opacity: 0.32;
+        filter: grayscale(0.55);
+    }
+
+    .tourney-stack { display: flex; flex-direction: column; gap: 4px; flex: 1; justify-content: center; }
+
+    /* Время вынесено из плашки в общую колонку слева: у всех турниров дня оно
+       на одной линии, день читается как расписание сверху вниз. Колонка
+       занимает место и когда время не указано — иначе плашки поедут вразнобой.
+       Ширину колонки задаёт flex-basis у .tourney-time (28px под «13:00»). */
+    .tourney-line { display: flex; align-items: stretch; gap: 3px; }
+    .tourney-time {
+        flex: 0 0 26px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;   /* прижато к левому краю ячейки */
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 10px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        font-variant-numeric: tabular-nums;   /* цифры одной ширины — колонка не пляшет */
+        color: #facc15;                       /* ярко-жёлтый, как метка времени на плашке эфира */
+        text-shadow: none;                    /* без тени — на тёмном фоне так чётче */
+    }
+    .tourney-bar {
+        flex: 1;
+        min-width: 0;             /* иначе длинное название распирает плашку за ячейку */
+        border-radius: 6px;
+        min-height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+    }
+    .tourney-name {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 11px;
+        line-height: 1.05;
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+        text-align: center;
+        color: #ffffff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        word-break: break-word;
+    }
+
+    .ctrl-input {
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        color: #e2e8f0;
+        padding: 6px 10px;
+        font-size: 13px;
+        width: 100%;
+    }
+    .ctrl-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px; display: block; }
+    .tab-btn { padding: 11px 14px; font-size: 13px; font-weight: 600; border-radius: 8px; color: #94a3b8; min-height: 44px; }
+    .tab-btn.active { background: #1e293b; color: #fff; }
+
+    .fed-dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 999px;
+        padding: 4px 8px 4px 10px;
+        font-size: 12px;
+    }
+    .chip button { color: #64748b; padding: 6px; margin: -6px; border-radius: 999px; }
+    .chip button:hover { color: #f87171; }
+
+    .file-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        color: #e2e8f0;
+        padding: 8px 10px;
+        font-size: 12.5px;
+        cursor: pointer;
+        width: 100%;
+    }
+    .file-btn:hover { background: #1e293b; }
+
+    /* ---- Недельный формат: тот же размер холста, что и у месяца (1000px,
+       ячейки 108px) — только вместо сетки 7×N два ряда: 3 дня + 4 дня. ---- */
+    .week-grid { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .week-row { display: flex; gap: 12px; justify-content: center; }
+
+    /* ---- Эфиры на день ---- */
+    .live-plate {
+        background: rgba(10, 12, 18, 0.55);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 28px;
+        padding: 28px 34px;
+        max-width: 780px;
+        margin: 0 auto;
+        box-shadow: 0 20px 50px -12px rgba(0,0,0,0.6);
+    }
+    .live-logo { max-height: 32px; max-width: 130px; object-fit: contain; display: block; }
+    .live-pill {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 18px;
+        padding: 18px 24px;
+        border: 1.5px solid rgba(255,255,255,0.2);
+    }
+    .live-pill-time { color: #facc15; } /* жёлтая метка времени, если оно указано */
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="flex flex-col lg:flex-row">
+    <!-- ============ ПАНЕЛЬ УПРАВЛЕНИЯ (не экспортируется) ============ -->
+    <!-- На узких экранах панель идёт сверху, во всю ширину, без фикс. высоты
+         (иначе на телефоне она заняла бы весь экран и превью не было бы видно
+         без прокрутки); с lg (1024px+) — прежнее поведение, боковая колонка 400px. -->
+    <aside class="w-full lg:w-[400px] shrink-0 lg:h-screen max-h-[70vh] lg:max-h-none overflow-y-auto bg-[#0b0f17] border-r border-slate-800 p-5 flex flex-col gap-5">
+        <!-- Cross-tool navigation: switch between the poster / announcement / calendar generators -->
+        <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide flex-wrap">
+            <a href="index.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Результаты</a>
+            <a href="2.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Анонс</a>
+            <a href="3.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-800 text-amber-400 border-amber-500/40">Календарь</a>
+            <a href="5.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Федерации</a>
+        <a href="6.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Рейтинги</a>
+        <a href="4.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фото игроков</a>
+        </div>
+
+        <div>
+            <h1 class="font-russo text-lg text-white">Календарь турниров</h1>
+            <p class="text-xs text-slate-400 mt-1">Общий календарь для МСЛ / ММТ / BMF</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-1 bg-[#0f172a] p-1 rounded-lg" id="tabs">
+            <button class="tab-btn active flex-1" data-tab="tab-main">Основное</button>
+            <button class="tab-btn flex-1" data-tab="tab-types">Турниры</button>
+            <button class="tab-btn flex-1" data-tab="tab-days">Дни</button>
+        </div>
+
+        <!-- TAB: Основное -->
+        <div id="tab-main" class="tab-panel flex flex-col gap-4">
+            <div id="month-select-wrap">
+                <span class="ctrl-label">Месяц</span>
+                <select id="input-month" class="ctrl-input"></select>
+            </div>
+
+            <div>
+                <span class="ctrl-label">Режим</span>
+                <select id="input-view-mode" class="ctrl-input">
+                    <option value="month" selected>Месяц</option>
+                    <option value="week">Неделя</option>
+                    <option value="live">Эфиры на день</option>
+                </select>
+            </div>
+            <div id="week-start-wrap" class="hidden">
+                <span class="ctrl-label">Начальный день недели (число месяца)</span>
+                <input id="input-week-start" type="number" min="1" max="31" value="1" class="ctrl-input">
+                <p class="text-[10px] text-slate-500 mt-1">Покажет этот день и ещё 6 дней подряд из выбранного месяца.</p>
+            </div>
+
+            <div id="live-controls" class="hidden flex flex-col gap-3">
+                <div>
+                    <span class="ctrl-label">Дата (эфиры на этот день)</span>
+                    <input id="input-live-date" type="date" class="ctrl-input">
+                    <p class="text-[10px] text-slate-500 mt-1">Турниры на эту дату берутся из вкладки «Дни» соответствующего месяца.</p>
+                </div>
+                <div>
+                    <span class="ctrl-label">Время начала (по желанию, не сохраняется)</span>
+                    <div id="live-time-list" class="flex flex-col gap-2"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 -mb-1">
+                <input type="checkbox" id="hide-past-toggle" class="rounded accent-emerald-500">
+                <label for="hide-past-toggle" class="text-xs text-slate-300 cursor-pointer">Скрыть прошедшие</label>
+            </div>
+
+            <div>
+                <span class="ctrl-label">Подпись слева снизу</span>
+                <input id="input-footer-left" type="text" class="ctrl-input" value="Общий календарь турниров">
+            </div>
+            <div>
+                <span class="ctrl-label">Подпись справа снизу</span>
+                <input id="input-footer" type="text" class="ctrl-input" value="Расписание турниров">
+            </div>
+
+            <hr class="border-slate-800">
+
+            <div>
+                <span class="ctrl-label">Логотип (newsdroplogo.png)</span>
+                <label class="file-btn">
+                    <span class="material-icons text-base">image</span> Загрузить логотип
+                    <input type="file" id="logo-upload" accept="image/*" class="hidden">
+                </label>
+            </div>
+            <div>
+                <span class="ctrl-label">Фон картинкой</span>
+                <label class="file-btn">
+                    <span class="material-icons text-base">wallpaper</span> Загрузить фон
+                    <input type="file" id="bg-upload" accept="image/*" class="hidden">
+                </label>
+                <button onclick="resetBackground()" class="text-xs text-slate-400 hover:text-slate-200 mt-1.5">Сбросить фон к тёмному по умолчанию</button>
+            </div>
+
+<div class="mt-2">
+    <span class="ctrl-label">Размытие фона</span>
+    <input type="range" id="bg-blur" min="0" max="20" value="0" class="w-full">
+</div>
+<div class="mt-2">
+    <span class="ctrl-label">Прозрачность фона</span>
+    <input type="range" id="bg-opacity" min="0" max="100" value="100" class="w-full">
+</div>
+
+            <hr class="border-slate-800">
+            <button onclick="captureImageAndDownload()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-oswald font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+                <span class="material-icons text-base">download</span> Скачать PNG
+            </button>
+            <button onclick="copyCanvasToClipboard()" class="bg-slate-700 hover:bg-slate-600 text-white font-oswald font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2">
+                <span class="material-icons text-base">content_copy</span> Копировать в буфер
+            </button>
+            <p id="status-msg" class="text-xs text-center text-slate-500 h-4"></p>
+        </div>
+
+        <!-- TAB: Турниры -->
+        <div id="tab-types" class="tab-panel hidden flex flex-col gap-4">
+            <p class="text-xs text-slate-400">Добавьте турниры и укажите, к какой категории каждый относится. Цвет на календаре — это МСЛ красный, ММТ синий, BMF зелёный. Список сохраняется в этом браузере между сессиями.</p>
+
+            <div class="flex flex-col gap-2 bg-[#0f172a] p-3 rounded-lg">
+                <span class="ctrl-label">Новый турнир</span>
+                <input id="new-tournament-name" type="text" class="ctrl-input" placeholder="Название турнира">
+                <select id="new-tournament-fed" class="ctrl-input">
+                    <option value="msl">МСЛ (красный)</option>
+                    <option value="mmt">ММТ (синий)</option>
+                    <option value="bmf">BMF (зелёный)</option>
+                </select>
+                <button onclick="addTournament()" class="text-xs font-semibold text-emerald-400 border border-emerald-700 rounded-lg py-2 hover:bg-emerald-900/30 mt-1">+ Добавить турнир</button>
+            </div>
+
+            <div>
+                <span class="ctrl-label">Список турниров</span>
+                <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+                    Нажми на турнир, чтобы прикрепить регламент, таблицу и рейтинг.
+                    Эти ссылки подставляются в посты автоматически.
+                </p>
+                <div id="tournaments-list" class="flex flex-col gap-2"></div>
+            </div>
+
+            <div>
+                <span class="ctrl-label">Федерации — правила и площадки</span>
+                <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+                    Заполняется один раз. Правила берутся по федерации турнира.
+                </p>
+                <div id="federations-list" class="flex flex-col gap-2"></div>
+            </div>
+
+            <button onclick="clearAllTournaments()" class="text-xs text-red-400 hover:text-red-300 mt-1">Очистить весь список турниров</button>
+        </div>
+
+        <!-- TAB: Дни -->
+        <div id="tab-days" class="tab-panel hidden flex flex-col gap-3">
+            <p class="text-xs text-slate-400 mb-1">На один день можно назначить несколько турниров разных категоррий.</p>
+            <div id="days-list" class="flex flex-col gap-3"></div>
+
+            <!-- Файл данных: турниры, расписание и время эфиров одним файлом -->
+            <div class="flex flex-col gap-2 mt-4 pt-4" style="border-top:1px solid rgba(255,255,255,0.1);">
+                <span class="ctrl-label">Файл данных календаря</span>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Турниры, расписание и время эфиров выгружаются одним файлом.
+                    Положи его рядом с сайтом — и календарь будет виден на телефоне и в публикаторе.
+                </p>
+                <button onclick="exportCalendarData()" class="ctrl-input" style="cursor:pointer; text-align:center;">
+                    Скачать calendar-data.js
+                </button>
+                <input type="file" id="calendar-import" accept=".js,.json" class="hidden" onchange="importCalendarData(this)">
+                <button onclick="document.getElementById('calendar-import').click()" class="ctrl-input" style="cursor:pointer; text-align:center;">
+                    Загрузить из файла
+                </button>
+                <p id="calendar-data-status" class="text-xs text-slate-500"></p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============ ПРЕВЬЮ / ЭКСПОРТ ============ -->
+    <main class="flex-1 flex items-start justify-center p-4 lg:p-10 overflow-auto">
+        <div class="preview-wrapper" id="preview-wrapper">
+            <div id="canvas-holder" class="rounded-2xl p-12">
+                <div id="bg-image-layer"></div>
+                <div id="bg-overlay"></div>
+
+                <div id="canvas-content">
+                    <!-- Верхняя шапка: логотип слева + месяц по центру -->
+                    <div id="cal-header-row" class="flex items-start justify-between mb-8" style="margin-top:-16px;">
+                        <div id="logo-slot">
+                            <img id="logo-img" src="content/photo/newsdroplogo.png" alt="NewsDrop" onerror="this.style.display='none'">
+                        </div>
+                      <div class="flex-1 text-center">
+    <div id="cal-month" class="main-text font-russo leading-none" style="font-size:54px;">ИЮНЬ</div>
+    <div id="cal-week-subtitle" class="accent-text font-oswald hidden" style="font-size:22px; letter-spacing:0.08em; margin-top:6px;">ИЮНЬ</div>
+</div>
+                        <div style="width:150px;"></div>
+                    </div>
+
+                    <!-- Эфиры на день: лого отдельно слева вверху (вне плашки),
+                         сама плашка — день недели + число слева, список турниров справа -->
+                    <div id="live-content" class="hidden" style="padding-top:52px;">
+                        <img id="live-logo-img" src="content/photo/newsdroplogo.png" alt="NewsDrop" class="live-logo" style="position:absolute; top:0; left:0; z-index:20;" onerror="this.style.display='none'">
+                        <div class="live-plate flex flex-col gap-5">
+                            <div class="flex items-start gap-8">
+                                <div class="shrink-0" style="width:120px;">
+                                    <div id="live-weekday" class="accent-text font-oswald font-bold uppercase" style="font-size:16px; letter-spacing:0.1em;"></div>
+                                    <div id="live-daynum" class="main-text font-bebas leading-none" style="font-size:72px;"></div>
+                                </div>
+                                <div id="live-list" class="flex-1 flex flex-col gap-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Сетка календаря -->
+                    <div class="cal-grid mb-3" id="cal-head-row"></div>
+                    <div class="cal-grid" id="cal-grid"></div>
+
+                    <!-- Подвал -->
+                    <div id="cal-footer-row" class="flex justify-between items-center pt-4 mt-8" style="border-top:1px solid rgba(255,255,255,0.14);">
+                        <div id="footer-left" class="text-white/70 font-oswald text-xs uppercase tracking-wide">Общий календарь турниров</div>
+                        <div class="text-white/40 font-oswald text-xs uppercase tracking-widest">News Drop</div>
+                        <div id="footer-right" class="text-white/70 font-oswald text-xs uppercase tracking-wide">Расписание турниров</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+/* ==================== ФЕДЕРАЦИИ ==================== */
+const FED_COLORS = { msl: '#dc2626', mmt: '#0284c7', bmf: '#16a34a' };
+const FED_LABELS = { msl: 'МСЛ', mmt: 'ММТ', bmf: 'БМФ' };
+
+const MONTHS = ['ЯНВАРЬ','ФЕВРАЛЬ','МАРТ','АПРЕЛЬ','МАЙ','ИЮНЬ','ИЮЛЬ','АВГУСТ','СЕНТЯБРЬ','ОКТЯБРЬ','НОЯБРЬ','ДЕКАБРЬ'];
+const WEEKDAYS = ['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
+
+const TOURN_KEY = 'tourncal_tournaments_v1';
+
+/* Справочник ссылок. Ключи те же, что читает публикатор TG.html, поэтому
+   заполняем здесь — а там только подставляется в посты.
+   Регламент, таблица и рейтинг живут при турнире (по id, а не по названию:
+   переименование турнира ссылки не рвёт), правила и площадки — при федерации. */
+const REF_TOURN_KEY = 'ndrop_ref_tournaments';
+const REF_FED_KEY = 'ndrop_ref_federations';
+
+const TOURN_REF_FIELDS = [
+    { key: 'reglament', label: 'Регламент' },
+    { key: 'table', label: 'Таблица' },
+    { key: 'rating', label: 'Рейтинг' }
+];
+const FED_REF_FIELDS = [
+    { key: 'rules', label: 'Правила' },
+    { key: 'rating', label: 'Рейтинг федерации' },
+    { key: 'youtube', label: 'YouTube' },
+    { key: 'rutube', label: 'RuTube' },
+    { key: 'vk', label: 'VK Видео' },
+    { key: 'twitch', label: 'Twitch' }
+];
+
+function readRef(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        const data = raw ? JSON.parse(raw) : null;
+        return (data && typeof data === 'object') ? data : {};
+    } catch (e) { return {}; }
+}
+function writeRef(key, data) {
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
+}
+function tournamentRef(id) {
+    const ref = readRef(REF_TOURN_KEY)[id] || {};
+    return { reglament: ref.reglament || '', table: ref.table || '', rating: ref.rating || '' };
+}
+function federationRef(code) {
+    const ref = readRef(REF_FED_KEY)[code] || {};
+    const out = {};
+    FED_REF_FIELDS.forEach(f => { out[f.key] = ref[f.key] || ''; });
+    return out;
+}
+function setRefField(storeKey, ownerId, field, value) {
+    const all = readRef(storeKey);
+    if (!all[ownerId]) all[ownerId] = {};
+    all[ownerId][field] = String(value || '').trim();
+    writeRef(storeKey, all);
+}
+const SCHEDULE_KEY_PREFIX = 'tourncal_schedule_v1_';
+
+// Год больше не выбирается вручную — берётся из системной даты автоматически
+const currentYear = new Date().getFullYear();
+
+/* ==================== ЭФИРЫ НА ДЕНЬ ====================
+   Время начала не сохраняется между сессиями — задаётся только внутри
+   карточки «Эфиры» на момент генерации (по решению из обсуждения). */
+function generateLiveTimeOptions() {
+    const opts = [];
+    for (let h = 9; h <= 22; h++) {
+        opts.push(`${String(h).padStart(2, '0')}:00`);
+        if (h !== 22) opts.push(`${String(h).padStart(2, '0')}:30`);
+    }
+    return opts;
+}
+const LIVE_TIME_OPTIONS = generateLiveTimeOptions();
+let liveTimesByTournamentId = {}; // { tournamentId: "HH:MM" } для текущей выбранной даты
+
+/* Время эфиров сохраняется по датам: раньше оно жило только до перезагрузки
+   страницы, и выставленные часы приходилось вбивать заново. */
+const LIVE_TIMES_KEY_PREFIX = 'tourncal_times_v1_';
+
+/* Финалы серийных турниров. Ключ на дату, значение — список id турниров,
+   у которых этот день решающий. Отдельным ключом, а не полем внутри
+   расписания: расписание уже лежит в проде, ломать его формат нельзя. */
+const FINALS_KEY_PREFIX = 'tourncal_finals_v1_';
+
+/* Номер серии — у каждой даты свой: 44-я, 45-я и так далее. Ключ на дату,
+   значение — { id турнира: "44" }. Устроено как время эфира. */
+const SERIES_KEY_PREFIX = 'tourncal_series_v1_';
+
+function loadSeriesNumbers(date) {
+    try {
+        const raw = localStorage.getItem(SERIES_KEY_PREFIX + isoKey(date));
+        const map = raw ? JSON.parse(raw) : {};
+        return (map && typeof map === 'object') ? map : {};
+    } catch (e) { return {}; }
+}
+function setSeriesNumber(date, id, value) {
+    const map = loadSeriesNumbers(date);
+    const clean = String(value || '').trim();
+    if (clean) map[id] = clean; else delete map[id];
+    try {
+        const key = SERIES_KEY_PREFIX + isoKey(date);
+        if (Object.keys(map).length) localStorage.setItem(key, JSON.stringify(map));
+        else localStorage.removeItem(key);
+    } catch (e) {}
+}
+
+function isoKey(date) {
+    return date.getFullYear() + '-' +
+           String(date.getMonth() + 1).padStart(2, '0') + '-' +
+           String(date.getDate()).padStart(2, '0');
+}
+function loadFinals(date) {
+    try {
+        const raw = localStorage.getItem(FINALS_KEY_PREFIX + isoKey(date));
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+}
+function saveFinals(date, ids) {
+    try {
+        const key = FINALS_KEY_PREFIX + isoKey(date);
+        if (ids && ids.length) localStorage.setItem(key, JSON.stringify(ids));
+        else localStorage.removeItem(key);
+    } catch (e) {}
+}
+function toggleFinal(date, id, on) {
+    const ids = loadFinals(date).filter(x => x !== id);
+    if (on) ids.push(id);
+    saveFinals(date, ids);
+}
+function liveTimesKey(date) {
+    return LIVE_TIMES_KEY_PREFIX + date.getFullYear() + '-' +
+           String(date.getMonth() + 1).padStart(2, '0') + '-' +
+           String(date.getDate()).padStart(2, '0');
+}
+function loadLiveTimes(date) {
+    try {
+        const raw = localStorage.getItem(liveTimesKey(date));
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+}
+function saveLiveTimes(date) {
+    try { localStorage.setItem(liveTimesKey(date), JSON.stringify(liveTimesByTournamentId)); }
+    catch (e) {}
+}
+
+function hexToRgb(hex) {
+    const parts = hex.replace('#', '').match(/.{1,2}/g);
+    return parts.map(p => parseInt(p, 16)).join(', ');
+}
+
+// Читает турниры конкретной даты напрямую из localStorage того месяца, к
+// которому она относится — независимо от того, какой месяц сейчас выбран
+// во вкладках «Основное»/«Дни» (чтобы не путать состояние редактора).
+function getEventsForDate(date) {
+    const key = SCHEDULE_KEY_PREFIX + date.getFullYear() + '_' + date.getMonth();
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const sched = JSON.parse(raw);
+        return sched[date.getDate()] || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+// Список тумблеров времени в сайдбаре — перестраивается при каждом render(),
+// пока активен режим "live", чтобы всегда соответствовать выбранной дате.
+function renderLiveTimeControls(date) {
+    liveTimesByTournamentId = loadLiveTimes(date);
+    const ids = getEventsForDate(date);
+    const list = document.getElementById('live-time-list');
+    list.innerHTML = '';
+
+    if (ids.length === 0) {
+        list.innerHTML = '<p class="text-xs text-slate-500">На эту дату турниров не назначено (добавьте во вкладке «Дни» нужного месяца).</p>';
+        return;
+    }
+
+    ids.forEach(id => {
+        const t = tournaments.find(x => x.id === id);
+        if (!t) return;
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-[#111827] border border-slate-700 rounded-lg px-3 py-2';
+        const current = liveTimesByTournamentId[id] || '';
+        let optionsHtml = '<option value="">— без времени —</option>';
+        LIVE_TIME_OPTIONS.forEach(time => {
+            optionsHtml += `<option value="${time}" ${time === current ? 'selected' : ''}>${time}</option>`;
+        });
+        row.innerHTML = `
+            <span class="fed-dot" style="background:${FED_COLORS[t.fed]}"></span>
+            <span class="flex-1 text-sm text-slate-200">${t.name}</span>
+            <select class="ctrl-input" style="width:auto;" data-role="live-time-select" data-tid="${t.id}">${optionsHtml}</select>
+        `;
+        list.appendChild(row);
+    });
+
+    list.querySelectorAll('[data-role="live-time-select"]').forEach(sel => {
+        sel.addEventListener('change', () => {
+            const tid = parseInt(sel.dataset.tid);
+            if (sel.value) liveTimesByTournamentId[tid] = sel.value;
+            else delete liveTimesByTournamentId[tid];
+            saveLiveTimes(date);
+            render();
+        });
+    });
+}
+
+/* ==================== ХРАНЕНИЕ (localStorage) ==================== */
+function loadTournaments() {
+    try {
+        const raw = localStorage.getItem(TOURN_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [
+        { id: 1, name: 'Кубок МСЛ', fed: 'msl' },
+        { id: 2, name: 'ULTA', fed: 'mmt' },
+        { id: 3, name: 'ТРОЙНИЧОК', fed: 'bmf' },
+        { id: 4, name: 'BELARUS MAFIA CUP', fed: 'bmf' }
+    ];
+}
+function saveTournaments() {
+    localStorage.setItem(TOURN_KEY, JSON.stringify(tournaments));
+}
+
+function scheduleKey(month) { return SCHEDULE_KEY_PREFIX + currentYear + '_' + month; }
+function loadSchedule(month) {
+    try {
+        const raw = localStorage.getItem(scheduleKey(month));
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
+}
+function saveSchedule() {
+    const month = parseInt(document.getElementById('input-month').value);
+    localStorage.setItem(scheduleKey(month), JSON.stringify(dayEvents));
+}
+
+let tournaments = loadTournaments();
+let nextTournamentId = tournaments.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+
+// dayEvents: { day: [tournamentId, tournamentId, ...] }
+let dayEvents = {};
+
+/* ==================== ФАЙЛ ДАННЫХ КАЛЕНДАРЯ ====================
+   Один файл со всем, что нужно другим инструментам: список турниров,
+   расписание по дням и время эфиров. Отдаём как .js, а не .json, потому что
+   .json браузер не читает со страницы, открытой с диска, а .js подключается
+   обычным тегом script и работает и локально, и на сайте. */
+
+function collectCalendarData() {
+    const days = {};
+    // Проходим по всем сохранённым месяцам этого и следующего года
+    for (let year = currentYear; year <= currentYear + 1; year++) {
+        for (let month = 0; month < 12; month++) {
+            let sched;
+            try {
+                const raw = localStorage.getItem(SCHEDULE_KEY_PREFIX + year + '_' + month);
+                sched = raw ? JSON.parse(raw) : null;
+            } catch (e) { sched = null; }
+            if (!sched) continue;
+
+            Object.keys(sched).forEach(day => {
+                const ids = sched[day] || [];
+                if (!ids.length) return;
+                const iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                let times = {};
+                try {
+                    const rawTimes = localStorage.getItem(LIVE_TIMES_KEY_PREFIX + iso);
+                    if (rawTimes) times = JSON.parse(rawTimes);
+                } catch (e) {}
+                let finals = [];
+                try {
+                    const rawFinals = localStorage.getItem(FINALS_KEY_PREFIX + iso);
+                    if (rawFinals) finals = JSON.parse(rawFinals) || [];
+                } catch (e) {}
+                let series = {};
+                try {
+                    const rawSeries = localStorage.getItem(SERIES_KEY_PREFIX + iso);
+                    if (rawSeries) series = JSON.parse(rawSeries) || {};
+                } catch (e) {}
+                days[iso] = { tournaments: ids, times: times, finals: finals, series: series };
+            });
+        }
+    }
+    return {
+        updatedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        tournaments: tournaments,
+        days: days,
+        // Справочник едет вместе с расписанием: на телефоне и на сайте
+        // localStorage пуст, и ссылки берутся отсюда.
+        refTournaments: readRef(REF_TOURN_KEY),
+        refFederations: readRef(REF_FED_KEY)
+    };
+}
+
+function exportCalendarData() {
+    const data = collectCalendarData();
+    const code = '/* NEWS DROP - данные календаря. Сгенерировано ' + data.updatedAt + '.\n' +
+                 '   Положи файл рядом со страницами и подключи тегом script. */\n' +
+                 'window.NDROP_CALENDAR = ' + JSON.stringify(data, null, 2) + ';\n';
+
+    const blob = new Blob([code], { type: 'application/javascript;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'calendar-data.js';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+    const dayCount = Object.keys(data.days).length;
+    setCalendarDataStatus('Выгружено: турниров ' + data.tournaments.length + ', дней с играми ' + dayCount + '.');
+}
+
+function importCalendarData(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const text = String(e.target.result);
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start < 0 || end < 0) throw new Error('в файле не найдены данные');
+            const data = JSON.parse(text.slice(start, end + 1));
+            if (!Array.isArray(data.tournaments)) throw new Error('нет списка турниров');
+
+            // Турниры
+            tournaments = data.tournaments;
+            saveTournaments();
+            nextTournamentId = tournaments.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+
+            // Расписание по месяцам и время эфиров
+            const byMonth = {};
+            Object.keys(data.days || {}).forEach(iso => {
+                const parts = iso.split('-');
+                const key = SCHEDULE_KEY_PREFIX + parseInt(parts[0]) + '_' + (parseInt(parts[1]) - 1);
+                if (!byMonth[key]) byMonth[key] = {};
+                byMonth[key][parseInt(parts[2])] = data.days[iso].tournaments || [];
+
+                const times = data.days[iso].times;
+                if (times && Object.keys(times).length) {
+                    localStorage.setItem(LIVE_TIMES_KEY_PREFIX + iso, JSON.stringify(times));
+                }
+                const finals = data.days[iso].finals;
+                if (finals && finals.length) {
+                    localStorage.setItem(FINALS_KEY_PREFIX + iso, JSON.stringify(finals));
+                }
+                const series = data.days[iso].series;
+                if (series && Object.keys(series).length) {
+                    localStorage.setItem(SERIES_KEY_PREFIX + iso, JSON.stringify(series));
+                }
+            });
+            Object.keys(byMonth).forEach(key => localStorage.setItem(key, JSON.stringify(byMonth[key])));
+
+            // Справочник ссылок — в старых файлах его нет, тогда не трогаем
+            if (data.refTournaments) writeRef(REF_TOURN_KEY, data.refTournaments);
+            if (data.refFederations) writeRef(REF_FED_KEY, data.refFederations);
+
+            dayEvents = loadSchedule(parseInt(document.getElementById('input-month').value));
+            renderTournamentsPanel();
+            renderFederationsPanel();
+            renderDaysPanel();
+            render();
+            setCalendarDataStatus('Загружено: турниров ' + tournaments.length +
+                                  ', дней с играми ' + Object.keys(data.days || {}).length + '.');
+        } catch (err) {
+            setCalendarDataStatus('Не удалось прочитать файл: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function setCalendarDataStatus(text) {
+    const el = document.getElementById('calendar-data-status');
+    if (el) el.textContent = text;
+}
+
+/* ==================== ИНИЦИАЛИЗАЦИЯ ==================== */
+function initMonthSelect() {
+    const sel = document.getElementById('input-month');
+    MONTHS.forEach((m, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = m;
+        sel.appendChild(opt);
+    });
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.remove('hidden');
+});
+
+/* ==================== ЛОГОТИП И ФОН ==================== */
+document.getElementById('logo-upload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        const img = document.getElementById('logo-img');
+        img.src = reader.result;
+        img.style.display = 'block';
+        const liveLogo = document.getElementById('live-logo-img');
+        if (liveLogo) {
+            liveLogo.src = reader.result;
+            liveLogo.style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('bg-blur').addEventListener('input', (e) => {
+    document.getElementById('bg-image-layer').style.filter = `blur(${e.target.value}px)`;
+});
+document.getElementById('bg-opacity').addEventListener('input', (e) => {
+    document.getElementById('bg-image-layer').style.opacity = e.target.value / 100;
+});
+
+document.getElementById('bg-upload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        const holder = document.getElementById('bg-image-layer');
+        holder.style.backgroundImage = `url(${reader.result})`;
+    };
+    reader.readAsDataURL(file);
+});
+
+function resetBackground() {
+    const holder = document.getElementById('bg-image-layer');
+    holder.style.backgroundImage = '';
+    bgLayer.style.filter = '';       // заодно сбросить блюр
+    bgLayer.style.opacity = '';      // и прозрачность
+}
+
+const bgProbe = new Image();
+bgProbe.onload = () => {
+    document.getElementById('bg-image-layer').style.backgroundImage = `url('content/photo/fon.png')`;
+};
+bgProbe.src = 'content/photo/fon.png';
+
+/* ==================== ПАНЕЛЬ "ТУРНИРЫ" ==================== */
+function renderTournamentsPanel() {
+    const list = document.getElementById('tournaments-list');
+    list.innerHTML = '';
+    if (tournaments.length === 0) {
+        list.innerHTML = '<p class="text-xs text-slate-500">Пока нет ни одного турнира.</p>';
+        return;
+    }
+    tournaments.forEach(t => {
+        const ref = tournamentRef(t.id);
+        const filled = TOURN_REF_FIELDS.filter(f => ref[f.key]).length;
+
+        const card = document.createElement('div');
+        card.className = 'bg-[#111827] border border-slate-700 rounded-lg overflow-hidden';
+        card.innerHTML = `
+            <div class="flex items-center gap-2 px-3 py-2">
+                <span class="fed-dot" style="background:${FED_COLORS[t.fed]}"></span>
+                <button class="flex-1 flex items-center gap-2 text-left" data-role="toggle-ref">
+                    <span class="flex-1 text-sm text-slate-200">${t.name}</span>
+                    <span data-role="serial-badge" class="text-[10px] font-oswald font-bold text-sky-400 ${t.isSerial ? '' : 'hidden'}">СЕРИЯ</span>
+                    <span class="text-[10px] font-oswald font-bold ${filled ? 'text-emerald-400' : 'text-slate-600'}">
+                        ${filled ? 'ссылок ' + filled : 'без ссылок'}
+                    </span>
+                    <span class="material-icons text-base text-slate-500" data-role="ref-chevron">expand_more</span>
+                </button>
+                <span class="text-[10px] uppercase font-oswald font-bold text-slate-400">${FED_LABELS[t.fed]}</span>
+                <button class="text-red-400 hover:text-red-300 p-2 -m-1" data-role="del-tournament" data-id="${t.id}"><span class="material-icons text-base">close</span></button>
+            </div>
+            <div class="hidden flex-col gap-2 px-3 pb-3 border-t border-slate-800 pt-3" data-role="ref-body">
+                <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input type="checkbox" data-role="serial" ${t.isSerial ? 'checked' : ''}
+                           class="rounded accent-emerald-500">
+                    Серийный турнир
+                </label>
+                <p class="text-[10px] text-slate-500 leading-tight -mt-1">
+                    В календаре федераций серийный турнир показывается одной строкой — на дату финала.
+                    Номер серии и отметка финала ставятся на каждой дате, во вкладке «Дни».
+                </p>
+                ${TOURN_REF_FIELDS.map(f => `
+                    <label class="flex flex-col gap-1">
+                        <span class="text-[10px] uppercase tracking-wide text-slate-500">${f.label}</span>
+                        <input type="url" class="ctrl-input text-xs" data-ref-field="${f.key}"
+                               value="${escapeAttr(ref[f.key])}" placeholder="https://…">
+                    </label>`).join('')}
+            </div>
+        `;
+
+        const body = card.querySelector('[data-role="ref-body"]');
+        const chevron = card.querySelector('[data-role="ref-chevron"]');
+        card.querySelector('[data-role="toggle-ref"]').addEventListener('click', () => {
+            const hidden = body.classList.toggle('hidden');
+            body.classList.toggle('flex', !hidden);
+            chevron.textContent = hidden ? 'expand_more' : 'expand_less';
+        });
+
+        // Сохраняем по выходу из поля: отдельной кнопки «сохранить» нет,
+        // чтобы не потерять правку при переключении вкладок.
+        card.querySelectorAll('[data-ref-field]').forEach(input => {
+            input.addEventListener('change', () => {
+                setRefField(REF_TOURN_KEY, t.id, input.dataset.refField, input.value);
+                showStatus('Ссылка сохранена');
+                renderTournamentsPanel();
+            });
+        });
+
+        const serialBox = card.querySelector('[data-role="serial"]');
+        serialBox.addEventListener('change', () => {
+            const target = tournaments.filter(x => x.id === t.id)[0];
+            if (!target) return;
+            target.isSerial = serialBox.checked;
+            delete target.seriesNumber;   // номер переехал на даты, при турнире он больше не живёт
+            saveTournaments();
+            // Пометку переключаем на месте: полная перерисовка списка свернула
+            // бы карточку прямо под курсором.
+            const badge = card.querySelector('[data-role="serial-badge"]');
+            if (badge) badge.classList.toggle('hidden', !serialBox.checked);
+            showStatus(serialBox.checked ? 'Отмечен серийным' : 'Больше не серийный');
+            renderDaysPanel();
+        });
+
+        list.appendChild(card);
+    });
+    list.querySelectorAll('[data-role="del-tournament"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.dataset.id);
+            const victim = tournaments.filter(x => x.id === id)[0];
+            if (!confirm('Удалить турнир «' + (victim ? victim.name : '') + '»?\n' +
+                         'Он пропадёт из календаря, а его ссылки на регламент, таблицу и рейтинг сотрутся.')) return;
+
+            tournaments = tournaments.filter(x => x.id !== id);
+            saveTournaments();
+
+            // Ссылки удалённого турнира больше не нужны никому
+            const refs = readRef(REF_TOURN_KEY);
+            delete refs[id];
+            writeRef(REF_TOURN_KEY, refs);
+            Object.keys(dayEvents).forEach(d => {
+                dayEvents[d] = dayEvents[d].filter(tid => tid !== id);
+                if (dayEvents[d].length === 0) delete dayEvents[d];
+            });
+            saveSchedule();
+            renderTournamentsPanel();
+            renderDaysPanel();
+            render();
+        });
+    });
+}
+
+/* Экранирование для value="…": в ссылках попадаются кавычки и амперсанды. */
+function escapeAttr(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderFederationsPanel() {
+    const box = document.getElementById('federations-list');
+    if (!box) return;
+    box.innerHTML = '';
+
+    Object.keys(FED_LABELS).forEach(code => {
+        const ref = federationRef(code);
+        const filled = FED_REF_FIELDS.filter(f => ref[f.key]).length;
+
+        const card = document.createElement('div');
+        card.className = 'bg-[#111827] border border-slate-700 rounded-lg overflow-hidden';
+        card.innerHTML = `
+            <button class="w-full flex items-center gap-2 px-3 py-2 text-left" data-role="toggle-fed">
+                <span class="fed-dot" style="background:${FED_COLORS[code]}"></span>
+                <span class="flex-1 text-sm text-slate-200">${FED_LABELS[code]}</span>
+                <span class="text-[10px] font-oswald font-bold ${filled ? 'text-emerald-400' : 'text-slate-600'}">
+                    ${filled ? 'ссылок ' + filled : 'без ссылок'}
+                </span>
+                <span class="material-icons text-base text-slate-500" data-role="fed-chevron">expand_more</span>
+            </button>
+            <div class="hidden flex-col gap-2 px-3 pb-3 border-t border-slate-800 pt-3" data-role="fed-body">
+                ${FED_REF_FIELDS.map(f => `
+                    <label class="flex flex-col gap-1">
+                        <span class="text-[10px] uppercase tracking-wide text-slate-500">${f.label}</span>
+                        <input type="url" class="ctrl-input text-xs" data-ref-field="${f.key}"
+                               value="${escapeAttr(ref[f.key])}" placeholder="https://…">
+                    </label>`).join('')}
+            </div>
+        `;
+
+        const body = card.querySelector('[data-role="fed-body"]');
+        const chevron = card.querySelector('[data-role="fed-chevron"]');
+        card.querySelector('[data-role="toggle-fed"]').addEventListener('click', () => {
+            const hidden = body.classList.toggle('hidden');
+            body.classList.toggle('flex', !hidden);
+            chevron.textContent = hidden ? 'expand_more' : 'expand_less';
+        });
+
+        card.querySelectorAll('[data-ref-field]').forEach(input => {
+            input.addEventListener('change', () => {
+                setRefField(REF_FED_KEY, code, input.dataset.refField, input.value);
+                showStatus(FED_LABELS[code] + ': сохранено');
+                renderFederationsPanel();
+            });
+        });
+
+        box.appendChild(card);
+    });
+}
+
+function addTournament() {
+    const nameInput = document.getElementById('new-tournament-name');
+    const fedSelect = document.getElementById('new-tournament-fed');
+    const name = nameInput.value.trim();
+    if (!name) { showStatus('Введите название турнира', true); return; }
+    tournaments.push({ id: nextTournamentId++, name: name, fed: fedSelect.value });
+    saveTournaments();
+    nameInput.value = '';
+    renderTournamentsPanel();
+    renderDaysPanel();
+    render();
+}
+
+function clearAllTournaments() {
+    if (!confirm('Удалить все турниры и их привязку к дням?')) return;
+    tournaments = [];
+    dayEvents = {};
+    saveTournaments();
+    saveSchedule();
+    renderTournamentsPanel();
+    renderDaysPanel();
+    render();
+}
+
+/* ==================== ПАНЕЛЬ "ДНИ" ==================== */
+function renderDaysPanel() {
+    const month = parseInt(document.getElementById('input-month').value);
+    const days = daysInMonth(currentYear, month);
+    const list = document.getElementById('days-list');
+    list.innerHTML = '';
+
+    for (let d = 1; d <= days; d++) {
+        const assignedIds = dayEvents[d] || [];
+        const available = tournaments.filter(t => !assignedIds.includes(t.id));
+
+        const wrap = document.createElement('div');
+        wrap.className = 'border border-slate-800 rounded-lg p-2.5';
+
+        // Время эфира задаётся прямо здесь, рядом с турниром: раньше за ним
+        // приходилось идти в отдельный режим «Эфиры на день».
+        const dayDate = new Date(currentYear, month, d);
+        const dayTimes = loadLiveTimes(dayDate);
+        const dayFinals = loadFinals(dayDate);
+        const daySeries = loadSeriesNumbers(dayDate);
+
+        const chipsHtml = assignedIds.map(id => {
+            const t = tournaments.find(x => x.id === id);
+            if (!t) return '';
+            const current = dayTimes[id] || '';
+            let timeOptions = '<option value="">--:--</option>';
+            LIVE_TIME_OPTIONS.forEach(time => {
+                timeOptions += `<option value="${time}" ${time === current ? 'selected' : ''}>${time}</option>`;
+            });
+
+            // Отметка финала нужна только серийным: у обычного турнира
+            // каждая дата и так попадает в календарь федераций.
+            const finalHtml = t.isSerial
+                ? `<input type="text" data-role="day-series" data-day="${d}" data-id="${id}" ` +
+                      `value="${escapeAttr(daySeries[id] || '')}" placeholder="№" inputmode="numeric" ` +
+                      `title="Номер серии" ` +
+                      `style="margin-left:6px; width:40px; text-align:center; background:#0b1120; color:#e2e8f0; ` +
+                      `border:1px solid #334155; border-radius:6px; font-size:11px; padding:1px 3px;">` +
+                  `<label title="Финал серии" style="margin-left:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;">` +
+                      `<input type="checkbox" data-role="day-final" data-day="${d}" data-id="${id}" ` +
+                      `${dayFinals.indexOf(id) !== -1 ? 'checked' : ''} style="accent-color:#facc15;">` +
+                      `<span style="font-family:Oswald,sans-serif; font-size:10px; font-weight:700; color:${dayFinals.indexOf(id) !== -1 ? '#facc15' : '#64748b'};">ФИНАЛ</span>` +
+                  `</label>`
+                : '';
+
+            return `<span class="chip"><span class="fed-dot" style="background:${FED_COLORS[t.fed]}"></span>${t.name}` +
+                   `<select data-role="day-time" data-day="${d}" data-id="${id}" ` +
+                   `style="margin-left:6px; background:#0b1120; color:#cbd5e1; border:1px solid #334155; border-radius:6px; font-size:11px; padding:1px 3px;">${timeOptions}</select>` +
+                   finalHtml +
+                   `<button data-role="rm" data-day="${d}" data-id="${id}"><span class="material-icons" style="font-size:14px;">close</span></button></span>`;
+        }).join('');
+
+        let options = '<option value="">+ добавить турнир</option>';
+        available.forEach(t => { options += `<option value="${t.id}">${t.name} (${FED_LABELS[t.fed]})</option>`; });
+
+        wrap.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-sm font-oswald font-bold text-white w-6">${d}</span>
+                <div class="flex flex-wrap gap-1.5 flex-1">${chipsHtml}</div>
+            </div>
+            <select class="ctrl-input" data-role="add-select" data-day="${d}" ${available.length === 0 ? 'disabled' : ''}>${options}</select>
+        `;
+        list.appendChild(wrap);
+    }
+
+    list.querySelectorAll('[data-role="rm"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const d = btn.dataset.day;
+            const id = parseInt(btn.dataset.id);
+            dayEvents[d] = (dayEvents[d] || []).filter(x => x !== id);
+            if (dayEvents[d].length === 0) delete dayEvents[d];
+            saveSchedule();
+            renderDaysPanel();
+            render();
+        });
+    });
+    list.querySelectorAll('[data-role="day-series"]').forEach(input => {
+        // Без перерисовки: поле под курсором, а перерисовка сбросила бы фокус
+        input.addEventListener('change', () => {
+            const day = parseInt(input.dataset.day);
+            const id = parseInt(input.dataset.id);
+            setSeriesNumber(new Date(currentYear, month, day), id, input.value);
+            showStatus(input.value.trim() ? 'Номер серии сохранён' : 'Номер серии убран');
+        });
+    });
+    list.querySelectorAll('[data-role="day-final"]').forEach(box => {
+        box.addEventListener('change', () => {
+            const day = parseInt(box.dataset.day);
+            const id = parseInt(box.dataset.id);
+            toggleFinal(new Date(currentYear, month, day), id, box.checked);
+            showStatus(box.checked ? 'Отмечен финал' : 'Отметка финала снята');
+            renderDaysPanel();
+            render();
+        });
+    });
+    list.querySelectorAll('[data-role="day-time"]').forEach(sel => {
+        sel.addEventListener('change', () => {
+            const day = parseInt(sel.dataset.day);
+            const id = parseInt(sel.dataset.id);
+            const date = new Date(currentYear, month, day);
+
+            const times = loadLiveTimes(date);
+            if (sel.value) times[id] = sel.value;
+            else delete times[id];
+
+            // saveLiveTimes пишет из общей переменной — подставляем в неё
+            // времена именно этого дня, чтобы не затереть соседние даты.
+            const keep = liveTimesByTournamentId;
+            liveTimesByTournamentId = times;
+            saveLiveTimes(date);
+            liveTimesByTournamentId = keep;
+
+            render();
+        });
+    });
+    list.querySelectorAll('[data-role="add-select"]').forEach(sel => {
+        sel.addEventListener('change', () => {
+            if (!sel.value) return;
+            const d = sel.dataset.day;
+            const id = parseInt(sel.value);
+            if (!dayEvents[d]) dayEvents[d] = [];
+            dayEvents[d].push(id);
+            saveSchedule();
+            renderDaysPanel();
+            render();
+        });
+    });
+}
+
+/* ==================== КАЛЕНДАРНАЯ ЛОГИКА ==================== */
+function daysInMonth(year, monthIndex) { return new Date(year, monthIndex + 1, 0).getDate(); }
+function firstWeekdayMonday(year, monthIndex) {
+    const d = new Date(year, monthIndex, 1).getDay(); // 0=Вс..6=Сб
+    return (d + 6) % 7; // 0=Пн..6=Вс
+}
+
+function onMonthChange() {
+    const month = parseInt(document.getElementById('input-month').value);
+    dayEvents = loadSchedule(month);
+    renderDaysPanel();
+    render();
+}
+
+// Строит одну ячейку дня (используется и месяцем, и неделей).
+// hidePast/today передаются из render(), чтобы не пересчитывать на каждую ячейку.
+// weekdayLabel — необязательная подпись дня недели, показывается только в
+// недельном режиме (там нет отдельной строки-шапки с ПН/ВТ/...).
+function buildDayCell(month, dayNum, total, hidePast, today, weekdayLabel = '') {
+    const cell = document.createElement('div');
+    const numLabel = weekdayLabel ? `${weekdayLabel} · ${dayNum}` : `${dayNum}`;
+
+    if (dayNum < 1 || dayNum > total) {
+        cell.className = 'cal-day blank';
+        return cell;
+    }
+
+    // Считаем "прошедшим" в любом случае — и для дней с турнирами, и для
+    // пустых, чтобы "Скрыть прошедшие" гасило весь прошедший месяц целиком.
+    const isPast = new Date(currentYear, month, dayNum) < today;
+    const pastClass = (hidePast && isPast) ? ' is-past' : '';
+
+    const ids = dayEvents[dayNum] || [];
+    if (ids.length === 0) {
+        cell.className = 'cal-day empty' + pastClass;
+        cell.textContent = numLabel;
+        return cell;
+    }
+
+    cell.className = 'cal-day filled' + pastClass;
+    const cellTimes = loadLiveTimes(new Date(currentYear, month, dayNum));
+    // Колонка времени появляется, только если хоть у одного турнира дня оно
+    // проставлено. Иначе пустые 28px просто съедали бы ширину названий.
+    const anyTime = ids.some(id => cellTimes[id]);
+
+    let bars = '';
+    ids.forEach(id => {
+        const t = tournaments.find(x => x.id === id);
+        if (!t) return;
+        const bar = `<div class="tourney-bar" style="background:${FED_COLORS[t.fed]}">` +
+                        `<span class="tourney-name">${t.name}</span>` +
+                    `</div>`;
+        if (!anyTime) { bars += bar; return; }
+        // У турнира без времени колонка остаётся пустой — плашки держат общую линию
+        bars += `<div class="tourney-line">` +
+                    `<span class="tourney-time">${cellTimes[id] || ''}</span>` +
+                    bar +
+                `</div>`;
+    });
+    cell.innerHTML = `<span class="num">${numLabel}</span><div class="tourney-stack">${bars}</div>`;
+    return cell;
+}
+
+// Масштабирует #preview-wrapper под доступную ширину контейнера — раньше
+// холст (1000px) на телефоне просто вылезал за экран и приходилось скроллить/
+// зумить. Ставит wrapper и transform, и явные width/height, чтобы блок в
+// разметке занимал ровно столько места, сколько видно — без пустоты и без
+// горизонтального скролла. На больших экранах ничего не меняется — там
+// availableWidth больше 1000px, и scale просто упирается в 1.
+function fitPreviewToContainer() {
+    const holder = document.getElementById('canvas-holder');
+    const wrapper = document.getElementById('preview-wrapper');
+    if (!holder || !wrapper) return;
+    const parent = wrapper.parentElement;
+    if (!parent) return;
+
+    const naturalWidth = holder.offsetWidth;
+    const naturalHeight = holder.offsetHeight;
+    if (!naturalWidth || !naturalHeight) return;
+
+    const availableWidth = Math.max(parent.clientWidth - 32, 120);
+    const scale = Math.min(availableWidth / naturalWidth, 1);
+
+    wrapper.style.transform = `scale(${scale})`;
+    wrapper.style.width = (naturalWidth * scale) + 'px';
+    wrapper.style.height = (naturalHeight * scale) + 'px';
+}
+window.addEventListener('resize', fitPreviewToContainer);
+
+function render() {
+    const month = parseInt(document.getElementById('input-month').value);
+const mode = document.getElementById('input-view-mode').value;
+const footerLeft = mode === 'week' ? 'Турниры на неделе' : document.getElementById('input-footer-left').value;
+const footerRight = document.getElementById('input-footer').value;
+const hidePast = document.getElementById('hide-past-toggle').checked;
+
+    const weekSubtitleEl = document.getElementById('cal-week-subtitle');
+if (mode === 'week') {
+    document.getElementById('cal-month').textContent = 'НА ЭТОЙ НЕДЕЛЕ';
+    weekSubtitleEl.textContent = MONTHS[month];
+    weekSubtitleEl.classList.remove('hidden');
+} else {
+    document.getElementById('cal-month').textContent = MONTHS[month];
+    weekSubtitleEl.classList.add('hidden');
+}
+    document.getElementById('footer-left').textContent = footerLeft;
+    document.getElementById('footer-right').textContent = footerRight;
+
+    // "Скрыть прошедшие" сравнивает дату ячейки с сегодняшней (без времени),
+    // поэтому день считается прошедшим только начиная со следующих суток.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const total = daysInMonth(currentYear, month);
+    const headRow = document.getElementById('cal-head-row');
+    const grid = document.getElementById('cal-grid');
+    const headerRow = document.getElementById('cal-header-row');
+    const liveContent = document.getElementById('live-content');
+    grid.innerHTML = '';
+
+    document.getElementById('week-start-wrap').classList.toggle('hidden', mode !== 'week');
+    document.getElementById('live-controls').classList.toggle('hidden', mode !== 'live');
+    document.getElementById('month-select-wrap').classList.toggle('hidden', mode === 'live');
+
+    // Сброс к состоянию "Месяц/Неделя" по умолчанию, каждый режим ниже
+    // переключает то, что ему нужно.
+    headerRow.classList.remove('hidden');
+    liveContent.classList.add('hidden');
+    headRow.classList.remove('hidden');
+    grid.classList.remove('hidden');
+
+    if (mode === 'live') {
+        headerRow.classList.add('hidden');
+        headRow.classList.add('hidden');
+        grid.classList.add('hidden');
+        liveContent.classList.remove('hidden');
+
+        const dateInput = document.getElementById('input-live-date');
+        if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+        const liveDate = new Date(dateInput.value + 'T00:00:00');
+
+        renderLiveTimeControls(liveDate);
+
+        document.getElementById('live-weekday').textContent = WEEKDAYS[(liveDate.getDay() + 6) % 7];
+        document.getElementById('live-daynum').textContent = liveDate.getDate();
+
+        const ids = getEventsForDate(liveDate);
+        const liveList = document.getElementById('live-list');
+        liveList.innerHTML = '';
+        if (ids.length === 0) {
+            liveList.innerHTML = '<p class="text-white/50 font-oswald">На этот день турниры не назначены</p>';
+        } else {
+            ids.forEach(id => {
+                const t = tournaments.find(x => x.id === id);
+                if (!t) return;
+                const rgb = hexToRgb(FED_COLORS[t.fed]);
+                const time = liveTimesByTournamentId[id];
+                const pill = document.createElement('div');
+                pill.className = 'live-pill';
+                pill.style.background = `rgba(${rgb}, 0.22)`;
+                pill.style.borderColor = `rgba(${rgb}, 0.5)`;
+                pill.innerHTML = `
+                    <span class="font-oswald font-bold text-white uppercase" style="font-size:20px; letter-spacing:0.02em;">${t.name}</span>
+                    ${time ? `<span class="font-oswald font-bold live-pill-time" style="font-size:18px;">${time}</span>` : ''}
+                `;
+                liveList.appendChild(pill);
+            });
+        }
+    } 
+
+     else if (mode === 'week') {
+    // Тот же класс .cal-grid, что у месяца (repeat(7, 108px)) — холст не меняется.
+    grid.className = 'cal-grid';
+    headRow.classList.remove('hidden');
+    headRow.innerHTML = WEEKDAYS.map(w => `<div class="cal-head">${w}</div>`).join('');
+
+    const startInput = document.getElementById('input-week-start');
+    const startDay = Math.min(Math.max(parseInt(startInput.value) || 1, 1), total);
+    startInput.value = startDay;
+
+    for (let i = 0; i < 7; i++) {
+        const dayNum = startDay + i;
+        grid.appendChild(buildDayCell(month, dayNum, total, hidePast, today));
+    }
+}
+    else {
+        grid.className = 'cal-grid';
+        headRow.classList.remove('hidden');
+        headRow.innerHTML = WEEKDAYS.map(w => `<div class="cal-head">${w}</div>`).join('');
+        const leading = firstWeekdayMonday(currentYear, month);
+        const rows = Math.ceil((leading + total) / 7);
+        const cellsCount = rows * 7;
+        for (let i = 0; i < cellsCount; i++) {
+            const dayNum = i - leading + 1;
+            grid.appendChild(buildDayCell(month, dayNum, total, hidePast, today));
+        }
+    }
+
+    // Высота холста меняется между режимами (месяц/неделя/эфиры) — пересчитываем
+    // масштаб превью каждый раз после перерисовки содержимого.
+    fitPreviewToContainer();
+}
+
+/* ==================== СОБЫТИЯ УПРАВЛЕНИЯ ==================== */
+document.getElementById('input-month').addEventListener('change', onMonthChange);
+['input-footer', 'input-footer-left'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => { render(); });
+});
+document.getElementById('input-view-mode').addEventListener('change', render);
+document.getElementById('input-week-start').addEventListener('input', render);
+document.getElementById('hide-past-toggle').addEventListener('change', render);
+document.getElementById('input-live-date').addEventListener('change', render);
+
+/* ==================== ЭКСПОРТ В PNG ==================== */
+function showStatus(msg, isError = false) {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.style.color = isError ? '#f87171' : '#34d399';
+    setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+
+/* =============== ЛОГОТИП И ЭКСПОРТ ===============
+   Страница, открытая с диска, «пачкает» холст любой картинкой: браузер
+   запрещает считывать пиксели, и toDataURL падает с Tainted canvases.
+   Поэтому перед сохранением проверяем каждую картинку на холсте: если она
+   портит экспорт, временно подменяем её на встроенную надпись NEWS DROP —
+   она нарисована прямо в разметке и ничего не пачкает. После сохранения
+   возвращаем всё как было.
+
+   На опубликованном сайте картинки свои, проверка ничего не подменит. */
+const NEWSDROP_FALLBACK_LOGO =
+    'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="64">' +
+    '<text x="0" y="30" font-family="Oswald, Arial, sans-serif" font-size="27" ' +
+    'font-weight="700" fill="#ffffff" letter-spacing="1">NEWS</text>' +
+    '<text x="0" y="58" font-family="Oswald, Arial, sans-serif" font-size="27" ' +
+    'font-weight="700" fill="#facc15" letter-spacing="1">DROP</text></svg>');
+
+function imageTaintsCanvas(img) {
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    try {
+        const probe = document.createElement('canvas');
+        probe.width = 4; probe.height = 4;
+        probe.getContext('2d').drawImage(img, 0, 0);
+        probe.toDataURL();
+        return false;
+    } catch (e) { return true; }
+}
+
+/* Возвращает функцию-откат: вызвать после экспорта. */
+function swapTaintedImages(root) {
+    const swapped = [];
+    root.querySelectorAll('img').forEach(img => {
+        if (!imageTaintsCanvas(img)) return;
+        swapped.push({ img: img, src: img.getAttribute('src') });
+        img.setAttribute('src', NEWSDROP_FALLBACK_LOGO);
+    });
+    return function () {
+        swapped.forEach(item => item.img.setAttribute('src', item.src));
+    };
+}
+
+/* Подменённой картинке надо дать загрузиться: html2canvas снимает то, что уже
+   отрисовано, и без ожидания возьмёт старый кадр — тот самый, что «пачкает». */
+function waitForSwappedImages(root) {
+    const list = Array.prototype.slice.call(root.querySelectorAll('img'));
+    return Promise.all(list.map(function (img) {
+        if (img.complete && img.naturalWidth) return Promise.resolve();
+        if (img.decode) return img.decode().catch(function () {});
+        return new Promise(function (done) {
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
+        });
+    }));
+}
+
+async function renderCleanCanvas(scaleFactor = 2) {
+    const holder = document.getElementById('canvas-holder');
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+    // Картинка с диска ломает экспорт — на время съёмки подменяем её
+    const restore = swapTaintedImages(holder);
+        await waitForSwappedImages(holder);
+    try {
+        return await html2canvas(holder, {
+            scale: scaleFactor,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: null,
+            logging: false
+        });
+    } finally { restore(); }
+}
+
+async function captureImageAndDownload() {
+    showStatus('Сохранение изображения...');
+    try {
+        const canvas = await renderCleanCanvas(2);
+        const month = document.getElementById('input-month').value;
+        const link = document.createElement('a');
+        link.download = `calendar_${MONTHS[month].toLowerCase()}_${currentYear}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showStatus('Готово! PNG скачан.');
+    } catch (err) {
+        showStatus('Ошибка экспорта: ' + err.message, true);
+    }
+}
+
+async function copyCanvasToClipboard() {
+    showStatus('Подготовка копии...');
+    try {
+        const canvas = await renderCleanCanvas(2);
+        canvas.toBlob(async (blob) => {
+            if (blob) {
+                try {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    await navigator.clipboard.write([item]);
+                    showStatus('Скопировано в буфер!');
+                } catch (err) {
+                    showStatus('Не удалось скопировать, используйте «Скачать PNG»', true);
+                }
+            }
+        });
+    } catch (e) {
+        showStatus('Ошибка: ' + e.message, true);
+    }
+}
+
+/* ==================== СТАРТ ==================== */
+initMonthSelect();
+// Открываем текущий месяц: раньше календарь всегда стартовал с августа,
+// и в начале работы приходилось переключать месяц вручную.
+const startMonth = new Date().getMonth();
+document.getElementById('input-month').value = startMonth;
+dayEvents = loadSchedule(startMonth);
+renderTournamentsPanel();
+renderFederationsPanel();
+renderDaysPanel();
+render();
+</script>
+
+<script src="publisher-bridge.js"></script>
+</body>
+</html>

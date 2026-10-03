@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рейтинги федераций — News Drop</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&family=Russo+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #050608; color: #e2e8f0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .font-oswald { font-family: 'Oswald', sans-serif; }
+
+    #canvas-holder {
+        position: relative; width: 1080px; box-sizing: border-box;
+        background: radial-gradient(circle at 50% 10%, #1a1a20 0%, #0b0b0f 60%, #050506 100%);
+    }
+    .preview-wrapper { transform-origin: top left; }
+    #canvas-content { position: relative; z-index: 2; --fed-text: #facc15; }
+
+    .r-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+    .r-mark { width: 74px; height: 74px; border-radius: 16px; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        border: 2px solid rgba(255,255,255,0.18);
+        font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px; color: #fff; }
+    .r-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 54px;
+        letter-spacing: 0.02em; line-height: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.6); }
+    .r-sub { font-family: 'Oswald', sans-serif; font-size: 15px; letter-spacing: 0.09em;
+        color: #94a3b8; margin-top: 8px; text-transform: uppercase; }
+
+    #r-grid { display: grid; gap: 10px; }
+
+    .cardA { position: relative; aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; background: #15161c; }
+    .cardA img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cardA .tint { position: absolute; inset: 0; mix-blend-mode: multiply; }
+    .cardA .veil { position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.55) 66%, rgba(0,0,0,.93) 100%); }
+    .cardA .foot { position: absolute; left: 12px; right: 12px; bottom: 11px;
+        display: flex; align-items: flex-end; gap: 9px; }
+    .cardA.hastag .foot { bottom: 33px; }
+    .cardA .place { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 40px; line-height: .82; color: #fff; }
+    .cardA .who { flex: 1; min-width: 0; }
+    .cardA .nick { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px;
+        line-height: 1.05; color: #fff; overflow-wrap: anywhere; }
+    .cardA .pts { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 23px;
+        line-height: 1; color: var(--fed-text); font-variant-numeric: tabular-nums; }
+    .cardA .tag { position: absolute; left: 0; right: 0; bottom: 0; padding: 5px 12px;
+        font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: .05em;
+        text-transform: uppercase; background: rgba(0,0,0,.72); color: rgba(255,255,255,.85); }
+
+    .cardB { border-radius: 12px; overflow: hidden; background: #15161c; border: 1px solid rgba(255,255,255,.08); }
+    .cardB .ph { aspect-ratio: 1/1; position: relative; }
+    .cardB .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cardB .num { position: absolute; top: 7px; left: 7px; width: 28px; height: 28px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 16px; color: #fff; }
+    .cardB .bar { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .cardB .nick { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 16px; color: #fff; overflow-wrap: anywhere; }
+    .cardB .pts { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; color: var(--fed-text);
+        font-variant-numeric: tabular-nums; }
+
+    .rowC { display: flex; align-items: center; gap: 11px; background: rgba(255,255,255,.045);
+        border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 7px 12px; }
+    .rowC .place { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px;
+        color: rgba(255,255,255,.5); width: 30px; font-variant-numeric: tabular-nums; }
+    .rowC img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .rowC .nick { flex: 1; font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 18px; color: #fff; }
+    .rowC .pts { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px; color: var(--fed-text);
+        font-variant-numeric: tabular-nums; }
+
+    /* Подача D: только места, ники и баллы — когда фото нет или они мешают */
+    .rowD { display: flex; align-items: center; gap: 16px; padding: 11px 18px;
+        border-radius: 10px; background: rgba(255,255,255,.05);
+        border: 1px solid rgba(255,255,255,.09); border-left-width: 4px; border-left-color: transparent; }
+    .rowD .place { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 26px;
+        width: 46px; color: rgba(255,255,255,.42); font-variant-numeric: tabular-nums; }
+    .rowD .nick { flex: 1; min-width: 0; font-family: 'Oswald', sans-serif; font-weight: 700;
+        font-size: 26px; color: #fff; overflow-wrap: anywhere; }
+    .rowD .tag { font-family: 'Oswald', sans-serif; font-size: 12px; letter-spacing: .05em;
+        text-transform: uppercase; color: rgba(255,255,255,.55); }
+    .rowD .pts { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 28px;
+        color: var(--fed-text); font-variant-numeric: tabular-nums; }
+
+    /* Фон постера — как на странице результатов */
+    #canvas-bg-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden;
+        border-radius: inherit; pointer-events: none; }
+    #canvas-bg-photo { position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; object-position: center; display: none; }
+    #canvas-bg-tint { position: absolute; inset: 0; background: rgba(0,0,0,0.2); }
+
+    #r-note { margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.14);
+        text-align: center; font-family: 'Oswald', sans-serif; font-size: 16px;
+        letter-spacing: .07em; text-transform: uppercase; color: rgba(255,255,255,.65); }
+
+    .ctrl-input { width: 100%; background: #0b1120; border: 1px solid #334155;
+        border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #e2e8f0; }
+    .ctrl-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+        color: #64748b; margin-bottom: 5px; font-weight: 700; }
+    .seg { display: flex; gap: 5px; flex-wrap: wrap; }
+    .seg button { font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: .05em;
+        text-transform: uppercase; padding: 7px 12px; border-radius: 8px; border: 1px solid #334155;
+        color: #94a3b8; background: #0b1120; min-height: 36px; }
+    .seg button.on { background: #1e293b; color: #fff; border-color: #475569; }
+</style>
+</head>
+<body class="min-h-screen p-3 lg:p-6">
+
+<div class="sticky top-0 z-50 -mx-3 lg:-mx-6 -mt-3 lg:-mt-6 mb-3 px-3 lg:px-6 py-2 bg-[#050608]/95 backdrop-blur border-b border-slate-800">
+<div class="max-w-[1600px] mx-auto flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide">
+    <a href="index.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Результаты</a>
+    <a href="2.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Анонс</a>
+    <a href="3.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Календарь</a>
+    <a href="5.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Федерации</a>
+    <a href="6.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-800 text-amber-400 border-amber-500/40">Рейтинги</a>
+    <a href="4.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фото игроков</a>
+</div>
+</div>
+
+<div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-6">
+
+    <aside class="w-full lg:w-[360px] shrink-0 flex flex-col gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+            <h1 class="font-oswald font-bold text-base text-white uppercase tracking-wide">Рейтинги федераций</h1>
+            <span class="ctrl-label">Источник</span>
+            <select id="source-select" class="ctrl-input"></select>
+            <button onclick="refreshSource()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 rounded-lg transition flex items-center justify-center gap-1">
+                <span class="material-icons text-sm">refresh</span> Обновить данные
+            </button>
+            <p id="load-status" class="text-xs leading-snug min-h-[16px]"></p>
+            <p id="snap-note" class="text-[11px] text-slate-500 leading-relaxed"></p>
+            <button onclick="toggleBlock('manual-box')" class="text-[11px] text-slate-500 hover:text-slate-300 text-left underline decoration-dotted">
+                Не грузится? Вставить данные вручную
+            </button>
+            <div id="manual-box" class="hidden flex-col gap-2">
+                <textarea id="manual-text" rows="6" class="ctrl-input text-[11px] font-mono"
+                    placeholder="1. Cristo 209&#10;2. AnnaMor 157&#10;…&#10;&#10;Можно скопировать прямо из таблицы — строки со вкладками тоже поймёт."></textarea>
+                <button onclick="applyManual()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs py-2 rounded-lg transition">
+                    Разобрать и показать
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+            <button onclick="toggleBlock('src-setup')" class="flex items-center justify-between w-full text-left">
+                <span class="ctrl-label" style="margin:0">Настройка источника</span>
+                <span class="material-icons text-base text-slate-500" id="src-setup-chevron">expand_more</span>
+            </button>
+            <div id="src-setup" class="hidden flex-col gap-3">
+                <div><span class="ctrl-label">Ссылка</span>
+                    <input type="text" id="src-url" class="ctrl-input text-[11px] font-mono"></div>
+                <div><span class="ctrl-label">Лист (для Google Таблиц)</span>
+                    <input type="text" id="src-sheet" class="ctrl-input text-xs" placeholder="Мастерс 26"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><span class="ctrl-label">Колонка ника</span>
+                        <select id="src-col-nick" class="ctrl-input text-xs"></select></div>
+                    <div><span class="ctrl-label">Колонка баллов</span>
+                        <select id="src-col-pts" class="ctrl-input text-xs"></select></div>
+                </div>
+                <p class="text-[10px] text-slate-500 leading-tight">
+                    Колонки заполняются после первой загрузки: нажми «Обновить данные»,
+                    и в списках появятся заголовки таблицы.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+            <div><span class="ctrl-label">Подача</span><div class="seg" id="layout-switch"></div></div>
+            <div class="grid grid-cols-2 gap-2">
+                <div><span class="ctrl-label">С места</span>
+                    <input type="number" id="range-from" class="ctrl-input text-xs" min="1" value="1"></div>
+                <div><span class="ctrl-label">По место</span>
+                    <input type="number" id="range-to" class="ctrl-input text-xs" min="1" value="8"></div>
+            </div>
+            <div><span class="ctrl-label">Проходят напрямую (первые N)</span>
+                <input type="number" id="cut-line" class="ctrl-input text-xs" min="0" value="8"></div>
+            <div><span class="ctrl-label">Подпись прошедшим</span>
+                <input type="text" id="tag-text" class="ctrl-input text-xs" placeholder="Гранд-финалист ММТ"></div>
+            <div><span class="ctrl-label">Заголовок</span>
+                <input type="text" id="title-text" class="ctrl-input text-xs"></div>
+            <div><span class="ctrl-label">Подзаголовок</span>
+                <input type="text" id="subtitle-text" class="ctrl-input text-xs"></div>
+            <div><span class="ctrl-label">Строка внизу</span>
+                <input type="text" id="note-text" class="ctrl-input text-xs"></div>
+            <div><span class="ctrl-label">Папка с фото</span>
+                <input type="text" id="photo-folder" class="ctrl-input text-[11px] font-mono" value="content/photo/"></div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-2">
+            <button onclick="toggleBlock('bg-box')" class="flex items-center justify-between w-full text-left">
+                <span class="ctrl-label" style="margin:0">Фон постера</span>
+                <span class="material-icons text-base text-slate-500" id="bg-box-chevron">expand_more</span>
+            </button>
+            <div id="bg-box" class="hidden flex-col gap-3">
+                <p id="bg-name" class="text-[11px] font-mono text-slate-500">Фона нет</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="file" id="bg-file" accept="image/*" onchange="handleBgUpload(this)" class="hidden">
+                    <button onclick="document.getElementById('bg-file').click()"
+                        class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs p-1.5 rounded-lg border border-slate-700 transition font-semibold">
+                        Загрузить фон
+                    </button>
+                    <button onclick="resetBg()"
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs p-1.5 rounded-lg border border-slate-700 transition font-semibold">
+                        Убрать
+                    </button>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between">
+                        <span class="ctrl-label" style="margin:0">Размытие</span>
+                        <span id="bg-blur-value" class="text-[11px] font-mono text-sky-400">0px</span>
+                    </div>
+                    <input type="range" id="bg-blur-range" min="0" max="40" value="0"
+                        oninput="onBgBlur()" class="w-full accent-sky-500">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between">
+                        <span class="ctrl-label" style="margin:0">Прозрачность фото</span>
+                        <span id="bg-opacity-value" class="text-[11px] font-mono text-sky-400">100%</span>
+                    </div>
+                    <input type="range" id="bg-opacity-range" min="0" max="100" value="100"
+                        oninput="onBgOpacity()" class="w-full accent-sky-500">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between">
+                        <span class="ctrl-label" style="margin:0">Затемнение</span>
+                        <span id="bg-darken-value" class="text-[11px] font-mono text-sky-400">20%</span>
+                    </div>
+                    <input type="range" id="bg-darken-range" min="0" max="90" value="20"
+                        oninput="onBgDarken()" class="w-full accent-sky-500">
+                </div>
+                <p class="text-[10px] text-slate-500 leading-tight">
+                    Размытие «выпекается» в само фото: html2canvas не умеет CSS-фильтры,
+                    иначе на экране было бы одно, а в скачанном PNG другое.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-2">
+            <button onclick="toggleBlock('alias-box')" class="flex items-center justify-between w-full text-left">
+                <span class="ctrl-label" style="margin:0">Фото не найдены</span>
+                <span class="material-icons text-base text-slate-500" id="alias-box-chevron">expand_more</span>
+            </button>
+            <div id="alias-box" class="hidden flex-col gap-2"></div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-2">
+            <button onclick="captureImageAndDownload()"
+                class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                <span class="material-icons text-base">download</span> Скачать PNG
+            </button>
+            <p id="status" class="text-xs text-slate-500 min-h-[16px]"></p>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex items-start justify-center overflow-auto">
+        <div class="preview-wrapper" id="preview-wrapper">
+            <div id="canvas-holder" class="rounded-2xl" style="padding:44px;">
+                <div id="canvas-bg-layer">
+                    <img id="canvas-bg-photo" alt="">
+                    <div id="canvas-bg-tint"></div>
+                </div>
+                <div id="canvas-content">
+                    <div class="r-head">
+                        <div class="r-mark" id="r-mark"></div>
+                        <div style="flex:1; text-align:center;">
+                            <div class="r-title" id="r-title"></div>
+                            <div class="r-sub" id="r-sub"></div>
+                        </div>
+                        <div style="width:74px"></div>
+                    </div>
+                    <div id="r-grid"></div>
+                    <p id="r-empty" class="text-center font-oswald" style="display:none; color:#64748b; font-size:18px; padding:50px 0;">
+                        Нет данных — нажми «Обновить данные»
+                    </p>
+                    <div id="r-note"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+/* =============================================================================
+   NEWS DROP · Рейтинги федераций
+   -----------------------------------------------------------------------------
+   Из всех таблиц берём только место, ник и сумму баллов. Остальные колонки у
+   каждой федерации свои и меняются от сезона к сезону — привязываться к ним
+   значит ломаться каждый январь.
+
+   Данные не тянутся при каждом открытии: кнопка «Обновить» делает снимок и
+   кладёт его в браузер вместе с датой. Картинка всегда собирается из снимка —
+   так она соберётся и без сети, а «по состоянию на…» берётся из даты снимка.
+   ============================================================================= */
+
+const FED_COLORS = { msl: '#dc2626', mmt: '#0284c7', bmf: '#16a34a' };
+/* Для цифр берём осветлённый оттенок той же федерации: базовый цвет на
+   тёмном фоне читается плохо, особенно синий ММТ. */
+const FED_TEXT = { msl: '#f87171', mmt: '#38bdf8', bmf: '#4ade80' };
+const FED_LABELS = { msl: 'МСЛ', mmt: 'ММТ', bmf: 'БМФ' };
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня',
+                    'июля','августа','сентября','октября','ноября','декабря'];
+
+const LS_SOURCES = 'ndrop_rating_sources';
+const LS_SNAP = 'ndrop_rating_snap_';
+const LS_ALIASES = 'ndrop_photo_aliases';
+const LS_PHOTOS = 'ndrop_rating_photos';
+const LS_BG = 'ndrop_rating_bg';
+
+const DEFAULT_SOURCES = [
+    { id:'mmt-table', fed:'mmt', name:'ММТ · Таблица (3 сезон)', kind:'gsheet',
+      url:'https://docs.google.com/spreadsheets/d/12mSto2VN1jE-oNwEny05fXc6HE2DFyTK07AmFfn4BWQ/edit',
+      sheet:'3 сезон', colNick:1, colPts:2, layout:'A', from:1, to:8, cut:8,
+      tag:'Гранд-финалист ММТ', title:'ТАБЛИЦА ММТ', subtitle:'',
+      note:'В гранд-финал ММТ проходят первые 8' },
+    { id:'bmf-masters', fed:'bmf', name:'БМФ · Мастерс 26', kind:'gsheet',
+      url:'https://docs.google.com/spreadsheets/d/1U_1Su2MHv7J_Up5bSmGVwJyQ8nV5fmsqYB-c6abFx74/edit',
+      sheet:'Мастерс 26', colNick:0, colPts:1, layout:'B', from:1, to:10, cut:9,
+      tag:'', title:'РЕЙТИНГ БМФ', subtitle:'ТОП-10', note:'Первые 9 проходят напрямую' },
+    { id:'bmf-pretenders', fed:'bmf', name:'БМФ · Битва претендентов', kind:'gsheet',
+      url:'https://docs.google.com/spreadsheets/d/1U_1Su2MHv7J_Up5bSmGVwJyQ8nV5fmsqYB-c6abFx74/edit',
+      sheet:'Мастерс 26', colNick:0, colPts:1, layout:'C', from:10, to:19, cut:0,
+      tag:'', title:'БИТВА ПРЕТЕНДЕНТОВ', subtitle:'',
+      note:'10 игроков разыграют оставшееся место' },
+    { id:'msl-race', fed:'msl', name:'МСЛ · Гонка Чемпионов 7+3', kind:'mediagame',
+      url:'https://mediagame.by/rating/champions-race-73',
+      sheet:'', colNick:1, colPts:2, layout:'A', from:1, to:8, cut:7,
+      tag:'Проходит напрямую', title:'ГОНКА ЧЕМПИОНОВ', subtitle:'«7+3» 2026',
+      note:'Первые 7 проходят напрямую' },
+    { id:'msl-rating', fed:'msl', name:'МСЛ · Общий рейтинг', kind:'mediagame',
+      url:'https://mediagame.by/rating',
+      sheet:'', colNick:1, colPts:2, layout:'B', from:1, to:10, cut:0,
+      tag:'', title:'РЕЙТИНГ МСЛ', subtitle:'ТОП-10', note:'' }
+];
+
+let sources = loadSources();
+let activeId = sources[0].id;
+let lastHeaders = [];
+
+function readLs(key, fallback) {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (e) { return fallback; }
+}
+function writeLs(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
+
+function loadSources() {
+    const saved = readLs(LS_SOURCES, null);
+    if (!Array.isArray(saved) || !saved.length) return DEFAULT_SOURCES.map(s => Object.assign({}, s));
+    // Новые заготовки добавляем к сохранённым, чужие настройки не трогаем
+    const byId = {};
+    saved.forEach(s => { byId[s.id] = s; });
+    DEFAULT_SOURCES.forEach(d => { if (!byId[d.id]) saved.push(Object.assign({}, d)); });
+    return saved;
+}
+function saveSources() { writeLs(LS_SOURCES, sources); }
+function current() { return sources.filter(s => s.id === activeId)[0] || sources[0]; }
+function snapshot(id) { return readLs(LS_SNAP + id, null); }
+
+function parseCsv(text) {
+    const rows = []; let row = [], cur = '', quoted = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (quoted) {
+            if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else quoted = false; }
+            else cur += c;
+        } else if (c === '"') quoted = true;
+        else if (c === ',') { row.push(cur); cur = ''; }
+        else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+        else if (c !== '\r') cur += c;
+    }
+    if (cur || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+}
+
+function sheetId(url) {
+    const m = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : '';
+}
+
+/* Google отдаёт таблицу как CSV и разрешает читать её прямо из браузера —
+   ни ключей, ни пересыльщика не нужно. */
+/* Страница открыта с диска, и обычный запрос к Google браузер режет: у файла
+   нет своего адреса, поэтому любой сайт для него чужой. У Google Таблиц есть
+   родной обходной путь — ответ приходит готовым кусочком кода через тег
+   script, а на такие запросы запрет не распространяется. Это основной путь;
+   разбор CSV через пересыльщика остался запасным. */
+function fetchSheetJsonp(src) {
+    const id = sheetId(src.url);
+    if (!id) return Promise.reject(new Error('в ссылке не видно идентификатора таблицы'));
+    return new Promise(function (resolve, reject) {
+        const cb = 'NDROP_GVIZ_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+        let url = 'https://docs.google.com/spreadsheets/d/' + id +
+                  '/gviz/tq?tqx=out:json;responseHandler:' + cb + '&headers=1';
+        if (src.sheet) url += '&sheet=' + encodeURIComponent(src.sheet);
+
+        const script = document.createElement('script');
+        let done = false;
+        const timer = setTimeout(function () {
+            finish(); reject(new Error('Google молчит больше 12 секунд'));
+        }, 12000);
+
+        function finish() {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+            if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cb] = function (res) {
+            finish();
+            if (!res || res.status === 'error') {
+                const first = res && res.errors && res.errors[0];
+                const msg = first ? (first.detailed_message || first.message || first.reason) : 'таблица не отдала данные';
+                reject(new Error(String(msg).replace(/<[^>]*>/g, '').trim()));
+                return;
+            }
+            const table = res.table || {};
+            const head = (table.cols || []).map(function (c) { return String(c.label == null ? '' : c.label).trim(); });
+            const body = (table.rows || []).map(function (r) {
+                return (r.c || []).map(function (cell) {
+                    if (cell == null) return '';
+                    if (cell.v != null) return cell.v;
+                    return cell.f == null ? '' : cell.f;
+                });
+            });
+            resolve([head].concat(body));
+        };
+
+        script.onerror = function () {
+            finish();
+            reject(new Error('Google не отдал таблицу — скорее всего доступ к ней не открыт ' +
+                             '(нужно «Все, у кого есть ссылка»)'));
+        };
+        /* Ответ дошёл, но таблицы в нём не было — так выглядит страница входа.
+           Без этой проверки страница молча ждала бы срабатывания таймера. */
+        script.onload = function () {
+            if (done) return;
+            finish();
+            reject(new Error('Google ответил, но не таблицей — похоже, доступ к ней закрыт ' +
+                             '(нужно «Все, у кого есть ссылка»)'));
+        };
+        script.src = url;
+        document.head.appendChild(script);
+    });
+}
+
+async function fetchSheet(src) {
+    try {
+        const table = await fetchSheetJsonp(src);
+        if (table.length > 1) return table;
+    } catch (e) {
+        window.__ndropSheetError = e.message || 'ошибка';
+    }
+    const id = sheetId(src.url);
+    if (!id) throw new Error('в ссылке не видно идентификатора таблицы');
+    let url = 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:csv';
+    if (src.sheet) url += '&sheet=' + encodeURIComponent(src.sheet);
+    let text;
+    try {
+        text = await fetchText(url);
+    } catch (e) {
+        throw new Error((window.__ndropSheetError ? window.__ndropSheetError + '; запасной путь — ' : '') + e.message);
+    }
+    if (text.trim()[0] === '<') {
+        throw new Error('вместо таблицы пришла страница входа — открой доступ ' +
+                        '«Все, у кого есть ссылка» или проверь имя листа «' + (src.sheet || '') + '»');
+    }
+    return parseCsv(text);
+}
+
+/* Страница открыта с диска, поэтому браузер считает её чужой всем сайтам.
+   Google так пускает, Safari и часть настроек — нет; на этот случай
+   повторяем запрос через пересыльщика. */
+async function fetchText(url) {
+    const tried = [];
+    try {
+        const r = await fetch(url);
+        if (r.ok) { const t = await r.text(); if (t && t.length > 20) return t; }
+        tried.push('напрямую: HTTP ' + r.status);
+    } catch (e) { tried.push('напрямую: ' + (e.message || 'заблокировано браузером')); }
+
+    for (let i = 0; i < PROXIES.length; i++) {
+        try {
+            const r = await fetch(PROXIES[i](url));
+            if (!r.ok) { tried.push('пересыльщик ' + (i + 1) + ': HTTP ' + r.status); continue; }
+            const t = await r.text();
+            if (t && t.length > 20) return t;
+            tried.push('пересыльщик ' + (i + 1) + ': пусто');
+        } catch (e) { tried.push('пересыльщик ' + (i + 1) + ': ' + (e.message || 'нет связи')); }
+    }
+    throw new Error(tried.join('; '));
+}
+
+/* MediaGame читать из браузера напрямую не даёт — идём через пересыльщика.
+   Страницы рейтинга, в отличие от страницы турнира, приходят с готовой
+   таблицей в исходнике, поэтому этого достаточно. */
+const PROXIES = [
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+    u => 'https://whateverorigin.org/get?url=' + encodeURIComponent(u),
+    u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)
+];
+
+async function fetchMediagame(src) {
+    let lastErr = null;
+    for (const build of PROXIES) {
+        try {
+            const r = await fetch(build(src.url));
+            const t = await r.text();
+            if (!t || t.length < 500) { lastErr = new Error('пустой ответ'); continue; }
+            const doc = new DOMParser().parseFromString(t, 'text/html');
+            const table = Array.from(doc.querySelectorAll('table'))
+                .sort((a, b) => b.querySelectorAll('tbody tr').length - a.querySelectorAll('tbody tr').length)[0];
+            if (!table || table.querySelectorAll('tbody tr').length < 2) { lastErr = new Error('таблица не найдена'); continue; }
+            const head = Array.from(table.querySelectorAll('thead th, thead td'))
+                .map(c => (c.textContent || '').replace(/\s+/g, ' ').trim());
+            const body = Array.from(table.querySelectorAll('tbody tr'))
+                .map(tr => Array.from(tr.children).map(td => (td.textContent || '').replace(/\s+/g, ' ').trim()));
+            return [head].concat(body);
+        } catch (e) { lastErr = e; }
+    }
+    throw new Error('не удалось загрузить: ' + (lastErr ? lastErr.message : 'пересыльщики молчат'));
+}
+
+function toNumber(value) {
+    const raw = String(value == null ? '' : value)
+        .replace(/—|–|−/g, '').replace(/\s| /g, '').replace(',', '.');
+    return /^-?\d+(\.\d+)?$/.test(raw) ? parseFloat(raw) : null;
+}
+
+/* Место не берём из файла: в разных таблицах оно то есть, то нет, а порядок
+   строк везде уже правильный — считаем сами. */
+function extractRows(table, src) {
+    const out = [];
+    table.slice(1).forEach(cells => {
+        const nick = String(cells[src.colNick] || '').replace(/\s+/g, ' ').trim();
+        if (!nick) return;
+        const pts = toNumber(cells[src.colPts]);
+        if (pts === null) return;
+        out.push({ place: out.length + 1, nick: nick, points: pts });
+    });
+    return out;
+}
+
+function setLoadStatus(text, kind) {
+    const el = document.getElementById('load-status');
+    el.textContent = text;
+    el.className = 'text-xs leading-snug min-h-[16px] ' +
+        (kind === 'err' ? 'text-rose-400' : kind === 'ok' ? 'text-emerald-400' : 'text-slate-400');
+}
+
+async function refreshSource() {
+    const src = current();
+    const status = { set textContent(v) { setLoadStatus(v, /Не вышло/.test(v) ? 'err' : 'ok'); } };
+    setLoadStatus('Загружаю…', 'wait');
+    try {
+        const table = src.kind === 'gsheet' ? await fetchSheet(src) : await fetchMediagame(src);
+        if (!table.length) throw new Error('таблица пустая');
+
+        lastHeaders = table[0].map(h => String(h).replace(/\s+/g, ' ').trim());
+        fillColumnSelects();
+
+        const rows = extractRows(table, src);
+        if (!rows.length) throw new Error('не нашлось ни ника, ни суммы — проверь колонки');
+
+        writeLs(LS_SNAP + src.id, { updatedAt: new Date().toISOString(), headers: lastHeaders, rows: rows });
+        status.textContent = 'Готово: строк ' + rows.length + '.';
+        render();
+    } catch (e) {
+        setLoadStatus('Не вышло. ' + (e.message || 'ошибка') +
+            '. Если ничего не помогает — вставь данные вручную кнопкой ниже.', 'err');
+    }
+}
+
+/* Запасной путь: строки, скопированные из таблицы или из поста. */
+function parseManual(text) {
+    const rows = [];
+    String(text).split('\n').forEach(line => {
+        if (!line.trim()) return;
+        let nick = '', pts = null;
+        if (line.indexOf('\t') > -1 || line.indexOf(';') > -1) {
+            const cells = line.split(/\t|;/).map(c => c.trim());
+            for (let i = cells.length - 1; i >= 0; i--) {
+                if (pts === null) { const n = toNumber(cells[i]); if (n !== null) { pts = n; continue; } }
+                if (!nick && cells[i] && toNumber(cells[i]) === null) nick = cells[i];
+            }
+        } else {
+            const m = line.trim().match(/^(?:\d+[.)]?\s+)?(.+?)\s+(-?\d+(?:[.,]\d+)?)$/);
+            if (m && toNumber(m[1]) === null) { nick = m[1].trim(); pts = toNumber(m[2]); }
+        }
+        if (nick && pts !== null) rows.push({ place: rows.length + 1, nick: nick, points: pts });
+    });
+    return rows;
+}
+
+function applyManual() {
+    const rows = parseManual(document.getElementById('manual-text').value);
+    if (!rows.length) {
+        setLoadStatus('Не разобрал ни строки. Нужен ник и число в одной строке.', 'err');
+        return;
+    }
+    writeLs(LS_SNAP + activeId, { updatedAt: new Date().toISOString(), headers: [], rows: rows });
+    setLoadStatus('Принято вручную: строк ' + rows.length + '.', 'ok');
+    render();
+}
+
+function photoBase() {
+    const raw = (document.getElementById('photo-folder').value || '').trim() || 'content/photo/';
+    return raw.endsWith('/') ? raw : raw + '/';
+}
+function aliases() { return readLs(LS_ALIASES, {}) || {}; }
+function uploadedPhotos() { return readLs(LS_PHOTOS, {}) || {}; }
+
+function photoFor(nick) {
+    const own = uploadedPhotos()[nick];
+    if (own) return own;
+    const map = aliases();
+    return photoBase() + (map[nick] || (nick + '.png'));
+}
+
+/* Загруженное фото уменьшаем перед сохранением: в браузере на всё про всё
+   около 5 МБ, десяток снимков с телефона туда просто не влезет. */
+function shrinkImage(file, maxDim, quality) {
+    return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onerror = function () { reject(new Error('не удалось прочитать файл')); };
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onerror = function () { reject(new Error('это не похоже на картинку')); };
+            img.onload = function () {
+                let w = img.naturalWidth, h = img.naturalHeight;
+                const k = Math.min(1, maxDim / Math.max(w, h));
+                w = Math.max(1, Math.round(w * k));
+                h = Math.max(1, Math.round(h * k));
+                const c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#15161c';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(c.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function saveBig(key, value, what) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) {
+        setLoadStatus('Не хватило места в браузере, чтобы сохранить ' + what +
+                      '. Удали лишние загруженные фото и попробуй снова.', 'err');
+        return false;
+    }
+}
+
+async function handlePlayerPhotoUpload(nick, input) {
+    if (!input.files || !input.files[0]) return;
+    try {
+        const data = await shrinkImage(input.files[0], 700, 0.85);
+        const all = uploadedPhotos();
+        all[nick] = data;
+        if (!saveBig(LS_PHOTOS, all, 'фото')) return;
+        setLoadStatus('Фото для «' + nick + '» загружено.', 'ok');
+        render();
+    } catch (e) {
+        setLoadStatus('Не вышло загрузить фото: ' + (e.message || 'ошибка'), 'err');
+    }
+    input.value = '';
+}
+
+function dropPlayerPhoto(nick) {
+    const all = uploadedPhotos();
+    delete all[nick];
+    writeLs(LS_PHOTOS, all);
+    render();
+}
+/* Заглушка вместо отсутствующего фото рисуется прямо в коде, поэтому
+   не «пачкает» холст и не ломает экспорт. */
+function placeholderFace(nick, color) {
+    const letter = (String(nick).trim()[0] || '?').toUpperCase();
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400">' +
+        '<rect width="300" height="400" fill="#1b1d24"/>' +
+        '<circle cx="150" cy="150" r="62" fill="' + color + '33"/>' +
+        '<path d="M150 230c-62 0-104 40-112 88h224c-8-48-50-88-112-88z" fill="' + color + '33"/>' +
+        '<text x="150" y="176" font-family="Oswald,Arial" font-size="86" font-weight="700" ' +
+        'fill="rgba(255,255,255,.55)" text-anchor="middle">' + letter + '</text></svg>';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function esc(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function visibleRows() {
+    const snap = snapshot(activeId);
+    if (!snap || !snap.rows) return [];
+    const from = Math.max(1, parseInt(document.getElementById('range-from').value, 10) || 1);
+    const to = Math.max(from, parseInt(document.getElementById('range-to').value, 10) || from);
+    return snap.rows.filter(r => r.place >= from && r.place <= to);
+}
+
+function render() {
+    const src = current();
+    const rows = visibleRows();
+    const grid = document.getElementById('r-grid');
+    const color = FED_COLORS[src.fed] || '#64748b';
+    const cut = parseInt(document.getElementById('cut-line').value, 10) || 0;
+    const tag = document.getElementById('tag-text').value.trim();
+
+    document.getElementById('r-empty').style.display = rows.length ? 'none' : 'block';
+    grid.innerHTML = '';
+    grid.style.columnGap = '';
+
+    if (src.layout === 'A') {
+        grid.style.gridTemplateColumns = 'repeat(' + (rows.length <= 6 ? Math.max(rows.length, 1) : 4) + ', minmax(0,1fr))';
+        rows.forEach(r => {
+            const withTag = tag && cut && r.place <= cut;
+            grid.insertAdjacentHTML('beforeend',
+                '<div class="cardA' + (withTag ? ' hastag' : '') + '">' +
+                    '<img src="' + esc(photoFor(r.nick)) + '" data-nick="' + esc(r.nick) + '" onerror="onPhotoMissing(this)">' +
+                    '<div class="tint" style="background:linear-gradient(180deg,transparent 45%,' + color + 'aa)"></div>' +
+                    '<div class="veil"></div>' +
+                    '<div class="foot"><span class="place">' + r.place + '</span>' +
+                        '<span class="who"><span class="nick">' + esc(r.nick) + '</span></span>' +
+                        '<span class="pts">' + r.points + '</span></div>' +
+                    (withTag ? '<div class="tag">' + esc(tag) + '</div>' : '') +
+                '</div>');
+        });
+    } else if (src.layout === 'B') {
+        grid.style.gridTemplateColumns = 'repeat(' + (rows.length <= 8 ? 4 : 5) + ', minmax(0,1fr))';
+        rows.forEach(r => {
+            const passed = cut && r.place <= cut;
+            grid.insertAdjacentHTML('beforeend',
+                '<div class="cardB">' +
+                    '<div class="ph"><img src="' + esc(photoFor(r.nick)) + '" data-nick="' + esc(r.nick) + '" onerror="onPhotoMissing(this)">' +
+                        '<span class="num" style="background:' + (passed ? color : 'rgba(0,0,0,.62)') + '">' + r.place + '</span></div>' +
+                    '<div class="bar"><span class="nick">' + esc(r.nick) + '</span>' +
+                        '<span class="pts">' + r.points + '</span></div>' +
+                '</div>');
+        });
+    } else if (src.layout === 'C') {
+        grid.style.gridTemplateColumns = 'repeat(2, minmax(0,1fr))';
+        grid.style.columnGap = '18px';
+        rows.forEach(r => {
+            grid.insertAdjacentHTML('beforeend',
+                '<div class="rowC"><span class="place">' + r.place + '</span>' +
+                    '<img src="' + esc(photoFor(r.nick)) + '" data-nick="' + esc(r.nick) + '" onerror="onPhotoMissing(this)">' +
+                    '<span class="nick">' + esc(r.nick) + '</span>' +
+                    '<span class="pts">' + r.points + '</span></div>');
+        });
+    } else {
+        grid.style.gridTemplateColumns = rows.length > 12 ? 'repeat(2, minmax(0,1fr))' : '1fr';
+        grid.style.columnGap = rows.length > 12 ? '14px' : '';
+        rows.forEach(r => {
+            const passed = cut && r.place <= cut;
+            grid.insertAdjacentHTML('beforeend',
+                '<div class="rowD"' + (passed ? ' style="border-left-color:' + color + '"' : '') + '>' +
+                    '<span class="place">' + r.place + '</span>' +
+                    '<span class="nick">' + esc(r.nick) + '</span>' +
+                    (passed && tag ? '<span class="tag">' + esc(tag) + '</span>' : '') +
+                    '<span class="pts">' + r.points + '</span></div>');
+        });
+    }
+
+    document.getElementById('r-title').textContent = document.getElementById('title-text').value;
+    document.getElementById('r-sub').textContent = subtitleText();
+    const noteEl = document.getElementById('r-note');
+    noteEl.textContent = document.getElementById('note-text').value;
+    noteEl.style.display = document.getElementById('note-text').value.trim() ? 'block' : 'none';
+
+    document.getElementById('canvas-content').style.setProperty(
+        '--fed-text', FED_TEXT[src.fed] || '#facc15');
+
+    const mark = document.getElementById('r-mark');
+    mark.style.borderColor = color + '66';
+    mark.textContent = FED_LABELS[src.fed] || '';
+
+    renderSnapNote();
+    scheduleAliasPanel();
+    scalePreview();
+}
+
+/* Дата снимка идёт в подзаголовок сама: руками её обновлять забудешь. */
+function subtitleText() {
+    const own = document.getElementById('subtitle-text').value.trim();
+    const snap = snapshot(activeId);
+    if (!snap || !snap.updatedAt) return own;
+    const d = new Date(snap.updatedAt);
+    const stamp = 'по состоянию на ' + d.getDate() + ' ' + MONTHS_GEN[d.getMonth()];
+    return own ? own + ' · ' + stamp : stamp;
+}
+
+function onPhotoMissing(img) {
+    img.src = placeholderFace(img.dataset.nick || '', FED_COLORS[current().fed] || '#64748b');
+    img.dataset.missing = '1';
+    scheduleAliasPanel();
+}
+
+let aliasTimer = null;
+function scheduleAliasPanel() { clearTimeout(aliasTimer); aliasTimer = setTimeout(renderAliasPanel, 200); }
+
+/* Ники, у которых фото не нашлось, плюс те, кому фото загрузили вручную.
+   На каждого — либо имя файла в общей папке, либо своя картинка. */
+function renderAliasPanel() {
+    const box = document.getElementById('alias-box');
+    if (!box) return;
+    const map = aliases();
+    const own = uploadedPhotos();
+    // Порядок — как в самой картинке: иначе строка прыгает вниз сразу после загрузки
+    const list = Array.from(new Set(
+        Array.from(document.querySelectorAll('#r-grid img[data-nick]'))
+            .filter(i => i.dataset.missing === '1' || own[i.dataset.nick])
+            .map(i => i.dataset.nick)
+            .filter(Boolean)));
+
+    box.innerHTML = '';
+    if (!list.length) {
+        box.innerHTML = '<p class="text-[11px] text-slate-500">' +
+            (document.querySelectorAll('#r-grid img').length
+                ? 'Все фото на месте.' : 'В этой подаче фото не используются.') + '</p>';
+        return;
+    }
+
+    list.forEach(nick => {
+        const loaded = !!own[nick];
+        const row = document.createElement('div');
+        row.className = 'flex flex-col gap-1 pb-2 border-b border-slate-800 last:border-0';
+        row.innerHTML =
+            '<div class="flex items-center gap-2">' +
+                '<span class="text-xs flex-1 truncate ' + (loaded ? 'text-emerald-400' : 'text-slate-300') + '">' +
+                    esc(nick) + (loaded ? ' — своё фото' : '') + '</span>' +
+                '<input type="file" accept="image/*" class="hidden">' +
+                '<button class="text-[11px] px-2 py-1 rounded-md border border-slate-700 ' +
+                    'bg-slate-800 hover:bg-slate-700 text-sky-300 font-semibold" data-role="pick">' +
+                    (loaded ? 'Заменить' : 'Загрузить') + '</button>' +
+                (loaded ? '<button class="text-[11px] px-2 py-1 rounded-md border border-slate-700 ' +
+                    'bg-slate-800 hover:bg-slate-700 text-slate-400" data-role="drop">Убрать</button>' : '') +
+            '</div>' +
+            (loaded ? '' : '<input type="text" class="ctrl-input text-[11px] font-mono" ' +
+                'placeholder="или имя файла в папке: ' + esc(nick) + '.png" value="' + esc(map[nick] || '') + '">');
+
+        const file = row.querySelector('input[type=file]');
+        row.querySelector('[data-role="pick"]').addEventListener('click', () => file.click());
+        file.addEventListener('change', () => handlePlayerPhotoUpload(nick, file));
+        const drop = row.querySelector('[data-role="drop"]');
+        if (drop) drop.addEventListener('click', () => dropPlayerPhoto(nick));
+        const text = row.querySelector('input[type=text]');
+        if (text) text.addEventListener('change', () => {
+            const all = aliases();
+            const v = text.value.trim();
+            if (v) all[nick] = v; else delete all[nick];
+            writeLs(LS_ALIASES, all);
+            render();
+        });
+        box.appendChild(row);
+    });
+}
+
+function renderSnapNote() {
+    const snap = snapshot(activeId);
+    const note = document.getElementById('snap-note');
+    if (!note) return;
+    if (!snap) { note.textContent = 'Снимка ещё нет — нажми «Обновить данные».'; return; }
+    note.textContent = 'Снимок от ' + new Date(snap.updatedAt).toLocaleString('ru-RU') +
+        ', строк ' + snap.rows.length + '. Картинка собирается из снимка, а не из сети.';
+}
+
+function toggleBlock(id) {
+    const body = document.getElementById(id);
+    const hidden = body.classList.toggle('hidden');
+    body.classList.toggle('flex', !hidden);
+    const chevron = document.getElementById(id + '-chevron');
+    if (chevron) chevron.textContent = hidden ? 'expand_more' : 'expand_less';
+}
+
+function buildSourceSelect() {
+    const sel = document.getElementById('source-select');
+    sel.innerHTML = sources.map(s => '<option value="' + s.id + '">' + esc(s.name) + '</option>').join('');
+    sel.value = activeId;
+}
+
+function buildLayoutSwitch() {
+    const box = document.getElementById('layout-switch');
+    box.innerHTML = '';
+    [['A','Карточки'],['B','Фото + строка'],['C','Строками'],['D','Без фото']].forEach(([code, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.className = current().layout === code ? 'on' : '';
+        b.addEventListener('click', () => {
+            current().layout = code; saveSources(); buildLayoutSwitch(); render();
+        });
+        box.appendChild(b);
+    });
+}
+
+function fillColumnSelects() {
+    const src = current();
+    const snap = snapshot(activeId);
+    const headers = lastHeaders.length ? lastHeaders : ((snap && snap.headers) || []);
+    ['src-col-nick', 'src-col-pts'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = headers.length
+            ? headers.map((h, i) => '<option value="' + i + '">' + i + ' · ' + esc(h || '—') + '</option>').join('')
+            : '<option value="">загрузи данные</option>';
+    });
+    if (headers.length) {
+        document.getElementById('src-col-nick').value = String(src.colNick);
+        document.getElementById('src-col-pts').value = String(src.colPts);
+    }
+}
+
+function loadSourceIntoForm() {
+    const src = current();
+    document.getElementById('src-url').value = src.url;
+    document.getElementById('src-sheet').value = src.sheet || '';
+    document.getElementById('range-from').value = src.from;
+    document.getElementById('range-to').value = src.to;
+    document.getElementById('cut-line').value = src.cut;
+    document.getElementById('tag-text').value = src.tag || '';
+    document.getElementById('title-text').value = src.title || '';
+    document.getElementById('subtitle-text').value = src.subtitle || '';
+    document.getElementById('note-text').value = src.note || '';
+    const snap = snapshot(activeId);
+    lastHeaders = (snap && snap.headers) || [];
+    fillColumnSelects();
+    buildLayoutSwitch();
+}
+
+function bindFormField(id, key, numeric) {
+    const el = document.getElementById(id);
+    el.addEventListener('change', () => {
+        current()[key] = numeric ? (parseInt(el.value, 10) || 0) : el.value;
+        saveSources();
+        render();
+    });
+    el.addEventListener('input', render);
+}
+
+async function captureImageAndDownload() {
+    const status = document.getElementById('status');
+    status.textContent = 'Сохраняю…';
+    try {
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        const holder = document.getElementById('canvas-holder');
+        const restore = swapTaintedImages(holder);
+        await waitForSwappedImages(holder);
+        let canvas;
+        try {
+            canvas = await html2canvas(holder, {
+                scale: 2, useCORS: true, allowTaint: false, backgroundColor: null, logging: false
+            });
+        } finally { restore(); }
+        const link = document.createElement('a');
+        link.download = 'rating_' + current().id + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        status.textContent = 'Готово, PNG скачан.';
+    } catch (e) {
+        status.textContent = 'Не удалось сохранить: ' + (e.message || 'ошибка');
+    }
+}
+
+/* Картинка с диска «пачкает» холст и роняет экспорт — на время съёмки
+   подменяем её нарисованной заглушкой, потом возвращаем. */
+function imageTaintsCanvas(img) {
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    try {
+        const probe = document.createElement('canvas');
+        probe.width = 4; probe.height = 4;
+        probe.getContext('2d').drawImage(img, 0, 0);
+        probe.toDataURL();
+        return false;
+    } catch (e) { return true; }
+}
+function swapTaintedImages(root) {
+    const swapped = [];
+    root.querySelectorAll('img').forEach(img => {
+        if (!imageTaintsCanvas(img)) return;
+        swapped.push({ img: img, src: img.getAttribute('src') });
+        img.setAttribute('src', placeholderFace(img.dataset.nick || '?', FED_COLORS[current().fed] || '#64748b'));
+    });
+    return function () { swapped.forEach(i => i.img.setAttribute('src', i.src)); };
+}
+
+/* Подменённой картинке надо дать загрузиться: html2canvas снимает то, что уже
+   отрисовано, и без ожидания возьмёт старый кадр — тот самый, что «пачкает». */
+function waitForSwappedImages(root) {
+    const list = Array.prototype.slice.call(root.querySelectorAll('img'));
+    return Promise.all(list.map(function (img) {
+        if (img.complete && img.naturalWidth) return Promise.resolve();
+        if (img.decode) return img.decode().catch(function () {});
+        return new Promise(function (done) {
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
+        });
+    }));
+}
+
+/* ---------- Фон постера ---------- */
+
+let bgOriginal = null;   // то, что загрузили
+let bgBaked = null;      // то же, но с «впечённым» размытием
+
+function bgSettings() {
+    return readLs(LS_BG, { blur: 0, opacity: 100, darken: 20, data: null }) ||
+           { blur: 0, opacity: 100, darken: 20, data: null };
+}
+function saveBgSettings(patch) {
+    const cur = bgSettings();
+    Object.keys(patch).forEach(k => { cur[k] = patch[k]; });
+    return saveBig(LS_BG, cur, 'фон');
+}
+
+async function handleBgUpload(input) {
+    if (!input.files || !input.files[0]) return;
+    try {
+        const data = await shrinkImage(input.files[0], 1600, 0.85);
+        if (!saveBgSettings({ data: data })) return;
+        bgOriginal = data;
+        await refreshBackground();
+        setLoadStatus('Фон загружен.', 'ok');
+    } catch (e) {
+        setLoadStatus('Не вышло загрузить фон: ' + (e.message || 'ошибка'), 'err');
+    }
+    input.value = '';
+}
+
+function resetBg() {
+    bgOriginal = null; bgBaked = null;
+    saveBgSettings({ data: null });
+    refreshBackground();
+}
+
+/* html2canvas не умеет CSS-фильтры: живое размытие видно на экране и
+   пропадает в скачанном PNG. Поэтому размываем сами, на холсте. */
+function bakeBlur(src, blurPx, maxDim) {
+    return new Promise(function (resolve, reject) {
+        if (!blurPx || blurPx <= 0) { resolve(src); return; }
+        const img = new Image();
+        img.onerror = function () { reject(new Error('не удалось прочитать фон')); };
+        img.onload = function () {
+            let w = img.naturalWidth, h = img.naturalHeight;
+            const k = Math.min(1, (maxDim || 1600) / Math.max(w, h));
+            w = Math.max(1, Math.round(w * k));
+            h = Math.max(1, Math.round(h * k));
+            const scaled = Math.max(1, Math.round(blurPx * k));
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            const ctx = c.getContext('2d');
+            ctx.filter = 'blur(' + scaled + 'px)';
+            // Рисуем с запасом по краям, иначе размытие подмешает пустоту
+            // и по периметру появится светлая кайма.
+            const over = 1 + ((scaled + 6) * 2) / Math.max(w, h);
+            const dw = w * over, dh = h * over;
+            ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+            resolve(c.toDataURL('image/jpeg', 0.9));
+        };
+        img.src = src;
+    });
+}
+
+let bakeToken = 0;
+async function refreshBackground() {
+    const cfg = bgSettings();
+    const img = document.getElementById('canvas-bg-photo');
+    const tint = document.getElementById('canvas-bg-tint');
+    const name = document.getElementById('bg-name');
+    if (!img) return;
+
+    if (name) name.textContent = cfg.data ? 'Своё фото загружено' : 'Фона нет';
+    if (tint) tint.style.background = 'rgba(0,0,0,' + (cfg.darken / 100).toFixed(2) + ')';
+
+    if (!cfg.data) { img.style.display = 'none'; img.removeAttribute('src'); return; }
+
+    const token = ++bakeToken;
+    let src = cfg.data;
+    try { src = await bakeBlur(cfg.data, cfg.blur, 1600); } catch (e) { src = cfg.data; }
+    if (token !== bakeToken) return;   // пока размывали, настройки уехали дальше
+
+    bgBaked = src;
+    img.src = src;
+    img.style.opacity = (cfg.opacity / 100).toString();
+    img.style.display = 'block';
+}
+
+function onBgBlur() {
+    const v = parseInt(document.getElementById('bg-blur-range').value, 10) || 0;
+    document.getElementById('bg-blur-value').textContent = v + 'px';
+    saveBgSettings({ blur: v });
+    refreshBackground();
+}
+function onBgOpacity() {
+    const v = parseInt(document.getElementById('bg-opacity-range').value, 10);
+    document.getElementById('bg-opacity-value').textContent = v + '%';
+    saveBgSettings({ opacity: v });
+    const img = document.getElementById('canvas-bg-photo');
+    if (img) img.style.opacity = (v / 100).toString();
+}
+function onBgDarken() {
+    const v = parseInt(document.getElementById('bg-darken-range').value, 10);
+    document.getElementById('bg-darken-value').textContent = v + '%';
+    saveBgSettings({ darken: v });
+    const tint = document.getElementById('canvas-bg-tint');
+    if (tint) tint.style.background = 'rgba(0,0,0,' + (v / 100).toFixed(2) + ')';
+}
+
+function restoreBgControls() {
+    const cfg = bgSettings();
+    bgOriginal = cfg.data;
+    document.getElementById('bg-blur-range').value = cfg.blur;
+    document.getElementById('bg-blur-value').textContent = cfg.blur + 'px';
+    document.getElementById('bg-opacity-range').value = cfg.opacity;
+    document.getElementById('bg-opacity-value').textContent = cfg.opacity + '%';
+    document.getElementById('bg-darken-range').value = cfg.darken;
+    document.getElementById('bg-darken-value').textContent = cfg.darken + '%';
+    refreshBackground();
+}
+
+function scalePreview() {
+    const wrapper = document.getElementById('preview-wrapper');
+    const holder = document.getElementById('canvas-holder');
+    const available = wrapper.parentElement.clientWidth;
+    const scale = Math.min(1, available / 1080);
+    wrapper.style.transform = 'scale(' + scale + ')';
+    wrapper.style.height = (holder.offsetHeight * scale) + 'px';
+}
+
+buildSourceSelect();
+loadSourceIntoForm();
+
+document.getElementById('source-select').addEventListener('change', () => {
+    activeId = document.getElementById('source-select').value;
+    loadSourceIntoForm();
+    render();
+});
+
+[['src-url','url'],['src-sheet','sheet'],['tag-text','tag'],
+ ['title-text','title'],['subtitle-text','subtitle'],['note-text','note']]
+    .forEach(([id, key]) => bindFormField(id, key, false));
+[['range-from','from'],['range-to','to'],['cut-line','cut'],
+ ['src-col-nick','colNick'],['src-col-pts','colPts']]
+    .forEach(([id, key]) => bindFormField(id, key, true));
+
+document.getElementById('photo-folder').addEventListener('input', render);
+
+render();
+restoreBgControls();
+window.addEventListener('resize', scalePreview);
+setTimeout(scalePreview, 100);
+</script>
+</body>
+</html>

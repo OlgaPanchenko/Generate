@@ -1,0 +1,21 @@
+{
+  "name": "GRAPHICS GENERATOR News Drop",
+  "short_name": "NewsDrop",
+  "start_url": "./1.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#39FF14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

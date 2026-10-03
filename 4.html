@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Фото игроков — NewsDrop</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#39FF14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NewsDrop">
+<link rel="apple-touch-icon" href="icon.png">
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+    }
+</script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #050608; color: #e2e8f0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .font-russo { font-family: 'Russo One', sans-serif; }
+
+    .ctrl-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+        color: #94a3b8; margin-bottom: 4px; display: block; font-weight: 700; }
+    .ctrl-input { background: #111827; border: 1px solid #334155; border-radius: 8px;
+        color: #e2e8f0; padding: 10px 12px; font-size: 15px; width: 100%; box-sizing: border-box; }
+    .ctrl-input:focus { outline: none; border-color: #34d399; }
+
+    .btn-primary { background: #059669; color: #fff; font-weight: 700; padding: 13px 18px;
+        border-radius: 10px; min-height: 48px; transition: background .15s ease; width: 100%; }
+    .btn-primary:hover:not(:disabled) { background: #10b981; }
+    .btn-primary:disabled { background: #1e293b; color: #64748b; }
+    .btn-secondary { background: #1e293b; color: #cbd5e1; font-weight: 600; padding: 11px 14px;
+        border-radius: 10px; min-height: 44px; border: 1px solid #334155; }
+    .btn-secondary:hover:not(:disabled) { background: #334155; }
+    .btn-secondary:disabled { opacity: .45; }
+
+    .drop-zone { border: 2px dashed #334155; border-radius: 12px; background: #0b1120; }
+    .drop-zone.drag-over { border-color: #34d399; background: #06251c; }
+
+    /* Шахматка под картинкой: сразу видно, где прозрачность, а где белый фон */
+    .checker {
+        background-image:
+            linear-gradient(45deg, #1b2130 25%, transparent 25%),
+            linear-gradient(-45deg, #1b2130 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #1b2130 75%),
+            linear-gradient(-45deg, transparent 75%, #1b2130 75%);
+        background-size: 16px 16px;
+        background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+        background-color: #131722;
+    }
+
+    #stage {
+        position: relative; width: 100%; max-width: 440px; aspect-ratio: 1/1;
+        border-radius: 18px; overflow: hidden; touch-action: none; cursor: grab;
+        border: 1.5px solid rgba(255,255,255,0.18);
+    }
+    #stage.dragging { cursor: grabbing; }
+    #stage canvas { display: block; width: 100%; height: 100%; }
+    /* Рамка поверх кадра: показывает, как фото сядет в круглую мини-аватарку */
+    #safe-ring { position: absolute; inset: 0; pointer-events: none; display: none; }
+    #safe-ring.on { display: block; }
+    #safe-ring::after {
+        content: ''; position: absolute; inset: 6%; border-radius: 50%;
+        border: 2px dashed rgba(52, 211, 153, .65);
+    }
+
+    .mini { width: 76px; height: 76px; border-radius: 50%; overflow: hidden;
+        border: 2px solid rgba(255,255,255,.2); }
+    .mini canvas { width: 100%; height: 100%; display: block; }
+
+    input[type=range] { width: 100%; accent-color: #34d399; height: 28px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="flex flex-col lg:flex-row">
+<aside class="w-full lg:w-[400px] shrink-0 lg:h-screen overflow-y-auto bg-[#0b0f17] border-b lg:border-b-0 lg:border-r border-slate-800 p-5 flex flex-col gap-5">
+
+    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide flex-wrap">
+        <a href="index.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Результаты</a>
+        <a href="2.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Анонс</a>
+        <a href="3.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Календарь</a>
+        <a href="5.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Федерации</a>
+        <a href="6.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Рейтинги</a>
+        <a href="4.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-800 text-emerald-400 border-emerald-500/40">Фото игроков</a>
+    </div>
+
+    <div>
+        <h1 class="font-russo text-lg text-white">Фото игроков</h1>
+        <p class="text-xs text-slate-400 mt-1">
+            Кадрирование под карточку постера: квадрат 900×900, имя файла по нику.
+        </p>
+    </div>
+
+    <div>
+        <span class="ctrl-label">Ник игрока</span>
+        <input id="nickname" type="text" class="ctrl-input" placeholder="Например: Бестия" autocomplete="off">
+        <p class="text-[11px] text-slate-500 mt-1">
+            Пиши ровно так, как он записан в таблице результатов — регистр и пробелы важны.
+        </p>
+    </div>
+
+    <div>
+        <span class="ctrl-label">Фото</span>
+        <div id="drop-zone" class="drop-zone p-4 text-center cursor-pointer">
+            <input id="file-input" type="file" accept="image/*" class="hidden">
+            <p id="drop-text" class="text-sm text-slate-400">Нажми, чтобы выбрать фото<br>
+                <span class="text-[11px] text-slate-600">или перетащи сюда</span></p>
+        </div>
+    </div>
+
+    <div id="editor-controls" class="hidden flex-col gap-4">
+        <div>
+            <div class="flex items-center justify-between">
+                <span class="ctrl-label" style="margin:0">Приближение</span>
+                <span id="zoom-value" class="text-[11px] font-mono text-emerald-400">100%</span>
+            </div>
+            <input type="range" id="zoom-range" min="100" max="400" value="100">
+        </div>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" id="show-ring" class="rounded accent-emerald-500">
+            Показать круг мини-аватарки
+        </label>
+        <button id="reset-btn" class="btn-secondary">Вернуть как было</button>
+    </div>
+
+    <div id="warn-box" class="hidden text-[12px] rounded-lg p-3 border border-amber-500/40 bg-amber-950/30 text-amber-300"></div>
+
+    <button id="save-btn" class="btn-primary flex items-center justify-center gap-2" disabled>
+        <span class="material-icons text-base">download</span>
+        <span id="save-btn-text">Сохранить 900×900</span>
+    </button>
+
+    <div id="status-box" class="hidden text-sm rounded-lg p-3 border"></div>
+
+    <div class="mt-auto pt-4 border-t border-slate-800 text-[11px] text-slate-500 leading-relaxed">
+        Готовый файл клади в папку <span class="font-mono text-slate-400">content/photo/</span> —
+        оттуда его берут результаты, анонс и рейтинги.
+        Прозрачный фон сохраняется: если убрала его заранее, он таким и останется.
+    </div>
+</aside>
+
+<main class="flex-1 p-4 lg:p-10 flex flex-col items-center gap-6">
+    <div id="empty-hint" class="text-slate-600 text-sm text-center py-20 px-6">
+        Выбери фото — здесь появится кадр, который можно двигать и приближать.
+    </div>
+
+    <div id="workspace" class="hidden flex-col items-center gap-5 w-full">
+        <div id="stage" class="checker">
+            <canvas id="stage-canvas"></canvas>
+            <div id="safe-ring"></div>
+        </div>
+        <p class="text-xs text-slate-500 text-center max-w-[440px]">
+            Двигай пальцем или мышью, приближай ползунком либо щипком.
+            Что видишь в квадрате — то и попадёт в карточку победителя.
+        </p>
+
+        <div class="flex items-center gap-4">
+            <div class="mini checker"><canvas id="mini-canvas"></canvas></div>
+            <div class="text-xs text-slate-400 leading-relaxed">
+                Так же это фото<br>покажется в таблице
+            </div>
+        </div>
+    </div>
+</main>
+</div>
+
+<script>
+/* =============================================================================
+   NEWS DROP · Подготовка фото игрока
+   -----------------------------------------------------------------------------
+   Карточка победителя в постере — квадрат, и постер выгружается в двойном
+   масштабе, поэтому нужный размер ровно 900×900. Фотографии, которые лежали
+   в папке раньше, были 304×337: и не квадрат, и втрое меньше нужного, отсюда
+   мыло и случайная обрезка. Эта страница решает ровно это и ничего больше.
+
+   Всё считается в браузере: ни ключей, ни сторонних сервисов, ни интернета.
+   Прозрачность исходника сохраняется — холст не заливается фоном.
+   ============================================================================= */
+
+const OUT_SIZE = 900;      // сторона готового файла
+const MAX_FILE_MB = 25;
+const MAX_ZOOM = 4;        // дальше приближать бессмысленно — пойдут пиксели
+
+const els = {
+    nickname: document.getElementById('nickname'),
+    dropZone: document.getElementById('drop-zone'),
+    dropText: document.getElementById('drop-text'),
+    fileInput: document.getElementById('file-input'),
+    editor: document.getElementById('editor-controls'),
+    zoom: document.getElementById('zoom-range'),
+    zoomValue: document.getElementById('zoom-value'),
+    ring: document.getElementById('show-ring'),
+    safeRing: document.getElementById('safe-ring'),
+    reset: document.getElementById('reset-btn'),
+    save: document.getElementById('save-btn'),
+    status: document.getElementById('status-box'),
+    warn: document.getElementById('warn-box'),
+    stage: document.getElementById('stage'),
+    stageCanvas: document.getElementById('stage-canvas'),
+    miniCanvas: document.getElementById('mini-canvas'),
+    workspace: document.getElementById('workspace'),
+    emptyHint: document.getElementById('empty-hint')
+};
+
+let img = null;        // исходное изображение
+let view = null;       // { side, cx, cy } — сторона видимого квадрата и его центр, в пикселях исходника
+
+function showStatus(text, kind) {
+    els.status.textContent = text;
+    els.status.className = 'text-sm rounded-lg p-3 border ' + (
+        kind === 'error' ? 'border-red-500/40 bg-red-950/40 text-red-300' :
+        kind === 'success' ? 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300' :
+                             'border-slate-700 bg-slate-900 text-slate-300');
+}
+function hideStatus() { els.status.classList.add('hidden'); }
+
+/* ---------- выбор файла ---------- */
+
+els.dropZone.addEventListener('click', (e) => {
+    // Поле выбора файла лежит внутри зоны: без проверки его собственный клик
+    // всплывает сюда и обработчик дёргает сам себя.
+    if (e.target === els.fileInput) return;
+    els.fileInput.click();
+});
+['dragenter', 'dragover'].forEach(evt => els.dropZone.addEventListener(evt, (e) => {
+    e.preventDefault(); els.dropZone.classList.add('drag-over');
+}));
+['dragleave', 'drop'].forEach(evt => els.dropZone.addEventListener(evt, (e) => {
+    e.preventDefault(); els.dropZone.classList.remove('drag-over');
+}));
+els.dropZone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleFile(file);
+});
+els.fileInput.addEventListener('change', () => {
+    const file = els.fileInput.files && els.fileInput.files[0];
+    // Сбрасываем значение, иначе выбор того же файла второй раз
+    // не вызывает change и ничего не происходит.
+    els.fileInput.value = '';
+    if (file) handleFile(file);
+});
+
+function handleFile(file) {
+    if (!file.type || file.type.indexOf('image/') !== 0) {
+        showStatus('Это не похоже на изображение — выбери jpg, png или heic.', 'error');
+        els.status.classList.remove('hidden');
+        return;
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+        showStatus('Фото тяжелее ' + MAX_FILE_MB + ' МБ (' +
+            (file.size / 1024 / 1024).toFixed(1) + ' МБ). Уменьши его.', 'error');
+        els.status.classList.remove('hidden');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+        showStatus('Не удалось прочитать файл. Если он в облаке — сначала скачай его на устройство.', 'error');
+        els.status.classList.remove('hidden');
+    };
+    reader.onload = () => {
+        const next = new Image();
+        next.onerror = () => {
+            showStatus('Браузер не смог открыть эту картинку. Попробуй пересохранить её в jpg или png.', 'error');
+            els.status.classList.remove('hidden');
+        };
+        next.onload = () => {
+            img = next;
+            els.dropText.textContent = file.name;
+            resetView();
+            els.workspace.classList.remove('hidden');
+            els.workspace.classList.add('flex');
+            els.emptyHint.classList.add('hidden');
+            els.editor.classList.remove('hidden');
+            els.editor.classList.add('flex');
+            els.save.disabled = false;
+            hideStatus();
+            checkSize();
+            sizeStage();
+            draw();
+        };
+        next.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+/* Фото меньше нужного растянется и будет мылить — про это честно предупреждаем,
+   потому что на экране редактора мыло почти не заметно, а в постере видно. */
+function checkSize() {
+    const short = Math.min(img.naturalWidth, img.naturalHeight);
+    if (short >= OUT_SIZE) { els.warn.classList.add('hidden'); return; }
+    els.warn.textContent = 'Фото маловато: короткая сторона ' + short + ' px вместо ' + OUT_SIZE +
+        '. Сохранить можно, но в постере будет мыльно. Если есть исходник побольше — возьми его.';
+    els.warn.classList.remove('hidden');
+}
+
+/* ---------- кадр ---------- */
+
+function minSide() { return Math.min(img.naturalWidth, img.naturalHeight); }
+
+function resetView() {
+    const side = minSide();
+    view = { side: side, cx: img.naturalWidth / 2, cy: img.naturalHeight / 2 };
+    els.zoom.value = 100;
+    els.zoomValue.textContent = '100%';
+    clampView();
+}
+
+/* Квадрат не должен выезжать за края фотографии — иначе по бокам пустота. */
+function clampView() {
+    const half = view.side / 2;
+    view.cx = Math.min(Math.max(view.cx, half), img.naturalWidth - half);
+    view.cy = Math.min(Math.max(view.cy, half), img.naturalHeight - half);
+}
+
+function setZoom(percent) {
+    const z = Math.min(Math.max(percent, 100), MAX_ZOOM * 100);
+    view.side = minSide() / (z / 100);
+    els.zoom.value = z;
+    els.zoomValue.textContent = Math.round(z) + '%';
+    clampView();
+    draw();
+}
+
+function sizeStage() {
+    const box = els.stage.getBoundingClientRect();
+    const px = Math.max(1, Math.round(box.width));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    els.stageCanvas.width = Math.round(px * dpr);
+    els.stageCanvas.height = Math.round(px * dpr);
+    els.miniCanvas.width = 152;
+    els.miniCanvas.height = 152;
+}
+
+/* Превью рисуем тем же кодом, что и готовый файл, только в другом размере —
+   поэтому в квадрате видно ровно то, что окажется в сохранённом PNG. */
+function paint(canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingQuality = 'high';
+    const half = view.side / 2;
+    ctx.drawImage(img, view.cx - half, view.cy - half, view.side, view.side,
+                  0, 0, canvas.width, canvas.height);
+}
+
+function draw() {
+    if (!img || !view) return;
+    paint(els.stageCanvas);
+    paint(els.miniCanvas);
+}
+
+/* ---------- перетаскивание и щипок ---------- */
+
+const pointers = new Map();
+let dragFrom = null, pinchFrom = null;
+
+els.stage.addEventListener('pointerdown', (e) => {
+    if (!img) return;
+    els.stage.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    els.stage.classList.add('dragging');
+    if (pointers.size === 1) {
+        dragFrom = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy };
+    } else if (pointers.size === 2) {
+        dragFrom = null;
+        pinchFrom = { dist: pointerDistance(), zoom: parseFloat(els.zoom.value) };
+    }
+});
+
+els.stage.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.size === 2 && pinchFrom) {
+        const d = pointerDistance();
+        if (pinchFrom.dist > 0) setZoom(pinchFrom.zoom * (d / pinchFrom.dist));
+        return;
+    }
+    if (!dragFrom) return;
+    // Один пиксель на экране — это side/ширина_квадрата пикселей исходника.
+    const box = els.stage.getBoundingClientRect();
+    const k = view.side / box.width;
+    view.cx = dragFrom.cx - (e.clientX - dragFrom.x) * k;
+    view.cy = dragFrom.cy - (e.clientY - dragFrom.y) * k;
+    clampView();
+    draw();
+});
+
+['pointerup', 'pointercancel', 'pointerleave'].forEach(evt =>
+    els.stage.addEventListener(evt, (e) => {
+        pointers.delete(e.pointerId);
+        if (pointers.size < 2) pinchFrom = null;
+        if (pointers.size === 0) { dragFrom = null; els.stage.classList.remove('dragging'); }
+    }));
+
+function pointerDistance() {
+    const list = Array.from(pointers.values());
+    if (list.length < 2) return 0;
+    return Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
+}
+
+els.stage.addEventListener('wheel', (e) => {
+    if (!img) return;
+    e.preventDefault();
+    setZoom(parseFloat(els.zoom.value) * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+}, { passive: false });
+
+els.zoom.addEventListener('input', () => setZoom(parseFloat(els.zoom.value)));
+els.ring.addEventListener('change', () => els.safeRing.classList.toggle('on', els.ring.checked));
+els.reset.addEventListener('click', () => { if (img) { resetView(); draw(); } });
+
+/* ---------- сохранение ---------- */
+
+function sanitizeFilename(name) {
+    return name.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+}
+
+els.save.addEventListener('click', () => {
+    if (!img) return;
+    const nick = els.nickname.value.trim();
+    if (!nick) {
+        showStatus('Впиши ник — по нему генераторы и находят фото.', 'error');
+        els.status.classList.remove('hidden');
+        els.nickname.focus();
+        return;
+    }
+
+    const out = document.createElement('canvas');
+    out.width = OUT_SIZE; out.height = OUT_SIZE;
+    paint(out);
+
+    const filename = sanitizeFilename(nick) + '.png';
+    out.toBlob((blob) => {
+        if (!blob) {
+            showStatus('Не удалось собрать файл. Попробуй ещё раз.', 'error');
+            els.status.classList.remove('hidden');
+            return;
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        // Отзываем не сразу: Safari на телефоне успевает потерять ссылку.
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        showStatus('Готово: «' + filename + '», ' + OUT_SIZE + '×' + OUT_SIZE +
+                   '. Положи его в content/photo/', 'success');
+        els.status.classList.remove('hidden');
+    }, 'image/png');
+});
+
+window.addEventListener('resize', () => { if (img) { sizeStage(); draw(); } });
+</script>
+</body>
+</html>
