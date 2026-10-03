@@ -695,9 +695,9 @@
                     </div>
 
                     <div class="flex gap-2">
-                        <input type="text" id="config-folder-path" value="content/photo/" oninput="applyVisualConfig(); refreshBackgroundPhoto(); retargetStaticPhotos();" 
+                        <input type="text" id="config-folder-path" value="https://minskmafia.by/content/photo/" oninput="applyVisualConfig(); refreshBackgroundPhoto(); retargetStaticPhotos();" 
                                class="bg-slate-900 border border-slate-700 text-white font-mono text-xs p-2 rounded-lg focus:outline-none focus:border-purple-500 flex-1" 
-                               placeholder="content/photo/">
+                               placeholder="https://minskmafia.by/content/photo/">
                         
                         <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" onchange="handleFolderSelect(this)">
                         <button onclick="document.getElementById('folder-input').click()" 
@@ -1115,7 +1115,7 @@
 
                         <!-- Top Left Theme Logo (Auto-loaded from photos folder) -->
                         <img id="canvas-theme-logo" 
-                             src="content/photo/logo_msl.png" 
+                             src="https://minskmafia.by/content/photo/logo_msl.png" 
                              onerror="this.style.display='none'"
                              onload="this.style.display='block'"
                              class="absolute top-8 left-8 h-32 max-w-[300px] object-contain z-50 drop-shadow-2xl" 
@@ -1167,7 +1167,7 @@
         <div class="flex flex-row items-center" style="gap:16px;">
         <div id="winner-card-slot-1" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element"
-                 src="content/photo/Castor Troy.png"
+                 src="https://minskmafia.by/content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 1)"
                  class="winner-photo-img"
                  alt="Featured Player 1">
@@ -1201,7 +1201,7 @@
          <div id="place-row-2" class="flex flex-row items-center hidden" style="gap:16px;">
 <div id="winner-card-slot-2" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element-2"
-                 src="content/photo/Castor Troy.png"
+                 src="https://minskmafia.by/content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 2)"
                  class="winner-photo-img"
                  alt="Featured Player 2">
@@ -1260,7 +1260,7 @@
                                 <div class="w-full flex items-center justify-between font-montserrat text-lg uppercase tracking-wider font-semibold opacity-90">
                                     <span id="footer-text-left-display" class="flex-1 text-left">Кубок МСЛ</span>
                                     <img id="canvas-footer-logo"
-                                         src="content/photo/newsdroplogo.png" 
+                                         src="https://minskmafia.by/content/photo/newsdroplogo.png" 
                                          onerror="this.style.display='none'" 
                                          onload="this.style.display='block'" 
                                          class="h-12 max-w-[200px] object-contain mx-4 drop-shadow-xl" 
@@ -1861,7 +1861,7 @@
 
         function photoBase() {
             const field = document.getElementById('config-folder-path');
-            const raw = (field ? field.value : '').trim() || 'content/photo/';
+            const raw = (field ? field.value : '').trim() || 'https://minskmafia.by/content/photo/';
             return raw.endsWith('/') ? raw : raw + '/';
         }
 
@@ -2012,7 +2012,7 @@
             const filename = DEFAULT_THEME_BACKGROUNDS[theme];
             if (!filename) return null;
 
-            const folderPath = document.getElementById('config-folder-path').value.trim() || 'content/photo/';
+            const folderPath = document.getElementById('config-folder-path').value.trim() || 'https://minskmafia.by/content/photo/';
             const formattedFolder = folderPath.endsWith('/') ? folderPath : folderPath + '/';
             return getPhotoSrc(filename, formattedFolder);
         }
@@ -2501,7 +2501,7 @@ function handleWinnerPhotoUpload3(input) {
             const subtitle = footerLeft || 'Турнир';
             if (subtitleInput) subtitleInput.value = subtitle;
 
-            const folderPath = document.getElementById('config-folder-path').value.trim() || 'content/photo/';
+            const folderPath = document.getElementById('config-folder-path').value.trim() || 'https://minskmafia.by/content/photo/';
             const formattedFolder = folderPath.endsWith('/') ? folderPath : folderPath + '/';
 
             const showThemeLogo = document.getElementById('show-theme-logo').checked;
@@ -2662,7 +2662,7 @@ if (finalistsCount >= 3) {
             saveDesignState();
         }
 
-     function renderCanvasTable(showMiniAvatars = false, folderPath = 'content/photo/') {
+     function renderCanvasTable(showMiniAvatars = false, folderPath = 'https://minskmafia.by/content/photo/') {
     const tbody = document.getElementById('canvas-table-body');
     tbody.innerHTML = '';
 
