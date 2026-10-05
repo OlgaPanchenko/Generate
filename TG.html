@@ -1897,5 +1897,135 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('beforeunload', saveSettings);
 });
 </script>
+
+<script>
+/* =========================================================================
+   Кнопки-ссылки под постом (например «Играть»).
+   Вставлять ПОСЛЕ основного скрипта, прямо перед </body>.
+   Сам добавляет блок в форму и превью, а при отправке цепляет reply_markup
+   к sendMessage / sendPhoto / sendDocument через обёртку над callApi.
+   ========================================================================= */
+(function () {
+    const SLOTS = 3;
+    const KEY = 'ndrop_tg_buttons';
+    const el = id => document.getElementById(id);
+
+    /* ---- стили превью ---- */
+    const style = document.createElement('style');
+    style.textContent = `
+        .tg-buttons { display: flex; flex-direction: column; gap: 4px; padding: 0 8px 8px; }
+        .tg-buttons:empty { display: none; }
+        .tg-buttons span {
+            background: rgba(255,255,255,.12); color: #fff; text-align: center;
+            border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 600; word-break: break-word;
+        }`;
+    document.head.appendChild(style);
+
+    /* ---- блок в форме: перед строкой «HTML-разметка / Пересобрать» ---- */
+    let rowsHtml = '';
+    for (let i = 1; i <= SLOTS; i++) {
+        rowsHtml += `
+        <div class="grid grid-cols-5 gap-2">
+            <input type="text" id="btn-text-${i}" class="field col-span-2" maxlength="64" placeholder="${i === 1 ? 'Играть' : 'Текст кнопки'}">
+            <input type="text" id="btn-url-${i}" class="field col-span-3 font-mono text-xs" inputmode="url" placeholder="https://t.me/бот/play">
+        </div>`;
+    }
+    const box = document.createElement('div');
+    box.className = 'flex flex-col gap-2';
+    box.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+            <label class="label">Кнопки-ссылки под постом</label>
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="opt-buttons" class="rounded accent-amber-500 w-4 h-4">
+                Прикрепить к посту
+            </label>
+        </div>
+        ${rowsHtml}
+        <p class="text-[11px] text-slate-500 leading-relaxed">Каждая кнопка — отдельная строка, пустые строки пропускаются. К альбому из нескольких картинок кнопки не прикрепить (ограничение Telegram). Галочка сбрасывается при каждом открытии страницы, чтобы кнопка не ушла в обычный пост.</p>`;
+    const anchor = el('opt-html').closest('.border-t');
+    anchor.parentNode.insertBefore(box, anchor);
+
+    /* ---- кнопки в превью ---- */
+    const preview = document.createElement('div');
+    preview.id = 'preview-buttons';
+    preview.className = 'tg-buttons';
+    el('preview-text').after(preview);
+
+    function fixUrl(u) {
+        u = (u || '').trim();
+        if (/^(t\.me|telegram\.me|telegram\.dog)\//i.test(u)) u = 'https://' + u;
+        return u;
+    }
+
+    /* ---- чтение / сохранение ---- */
+    function readRows() {
+        const out = [];
+        for (let i = 1; i <= SLOTS; i++) {
+            out.push({ n: i, text: el('btn-text-' + i).value.trim(), url: fixUrl(el('btn-url-' + i).value) });
+        }
+        return out;
+    }
+    function save() {
+        try { writeJson(KEY, readRows().map(r => [r.text, r.url])); } catch (e) {}
+    }
+    function load() {
+        const saved = readJson(KEY, []);
+        for (let i = 1; i <= SLOTS; i++) {
+            const row = Array.isArray(saved[i - 1]) ? saved[i - 1] : [];
+            el('btn-text-' + i).value = row[0] || (i === 1 && !saved.length ? 'Играть' : '');
+            el('btn-url-' + i).value = row[1] || '';
+        }
+    }
+    function renderPreview() {
+        preview.innerHTML = '';
+        if (!el('opt-buttons').checked) return;
+        readRows().filter(r => r.text).forEach(r => {
+            const s = document.createElement('span');
+            s.textContent = r.text;
+            preview.appendChild(s);
+        });
+    }
+
+    /* ---- клавиатура для Telegram; бросает понятную ошибку, если что-то не так ---- */
+    function keyboard() {
+        if (!el('opt-buttons').checked) return [];
+        const rows = [];
+        readRows().forEach(r => {
+            if (!r.text && !r.url) return;
+            if (!r.text || !r.url) throw new Error(`Кнопка ${r.n}: заполни и текст, и ссылку.`);
+            if (!/^(https?:\/\/|tg:\/\/)/i.test(r.url)) throw new Error(`Кнопка ${r.n}: ссылка должна начинаться с https://`);
+            rows.push([{ text: r.text, url: r.url }]);
+        });
+        if (!rows.length) throw new Error('Включена галочка «Прикрепить к посту», но кнопки не заполнены.');
+        return rows;
+    }
+
+    /* ---- обёртка над callApi из основного скрипта ---- */
+    const WITH_BUTTONS = ['sendMessage', 'sendPhoto', 'sendDocument'];
+    const originalCallApi = window.callApi;
+    window.callApi = function (method, formData) {
+        if (WITH_BUTTONS.includes(method) || method === 'sendMediaGroup') {
+            let kb;
+            try { kb = keyboard(); } catch (e) { return Promise.reject(e); }
+            if (kb.length) {
+                if (method === 'sendMediaGroup') {
+                    return Promise.reject(new Error('К альбому из нескольких картинок кнопки не прикрепить. Оставь одну картинку или сними галочку «Прикрепить к посту».'));
+                }
+                formData.append('reply_markup', JSON.stringify({ inline_keyboard: kb }));
+            }
+        }
+        return originalCallApi.apply(this, arguments);
+    };
+
+    /* ---- запуск ---- */
+    load();
+    el('opt-buttons').addEventListener('change', renderPreview);
+    for (let i = 1; i <= SLOTS; i++) {
+        ['btn-text-' + i, 'btn-url-' + i].forEach(id =>
+            el(id).addEventListener('input', () => { save(); renderPreview(); }));
+    }
+    renderPreview();
+})();
+</script>
 </body>
 </html>

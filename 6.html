@@ -190,7 +190,7 @@
             <div><span class="ctrl-label">Строка внизу</span>
                 <input type="text" id="note-text" class="ctrl-input text-xs"></div>
             <div><span class="ctrl-label">Папка с фото</span>
-                <input type="text" id="photo-folder" class="ctrl-input text-[11px] font-mono" value="content/photo/"></div>
+                <input type="text" id="photo-folder" class="ctrl-input text-[11px] font-mono" value="https://minskmafia.by/content/photo/"></div>
         </div>
 
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-2">
@@ -612,7 +612,7 @@ function applyManual() {
 }
 
 function photoBase() {
-    const raw = (document.getElementById('photo-folder').value || '').trim() || 'content/photo/';
+    const raw = (document.getElementById('photo-folder').value || '').trim() || 'https://minskmafia.by/content/photo/';
     return raw.endsWith('/') ? raw : raw + '/';
 }
 function aliases() { return readLs(LS_ALIASES, {}) || {}; }

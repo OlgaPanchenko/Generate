@@ -433,7 +433,7 @@
                     <!-- Верхняя шапка: логотип слева + месяц по центру -->
                     <div id="cal-header-row" class="flex items-start justify-between mb-8" style="margin-top:-16px;">
                         <div id="logo-slot">
-                            <img id="logo-img" src="content/photo/newsdroplogo.png" alt="NewsDrop" onerror="this.style.display='none'">
+                            <img id="logo-img" src="https://minskmafia.by/content/photo/newsdroplogo.png" alt="NewsDrop" onerror="this.style.display='none'">
                         </div>
                       <div class="flex-1 text-center">
     <div id="cal-month" class="main-text font-russo leading-none" style="font-size:54px;">ИЮНЬ</div>
@@ -445,7 +445,7 @@
                     <!-- Эфиры на день: лого отдельно слева вверху (вне плашки),
                          сама плашка — день недели + число слева, список турниров справа -->
                     <div id="live-content" class="hidden" style="padding-top:52px;">
-                        <img id="live-logo-img" src="content/photo/newsdroplogo.png" alt="NewsDrop" class="live-logo" style="position:absolute; top:0; left:0; z-index:20;" onerror="this.style.display='none'">
+                        <img id="live-logo-img" src="https://minskmafia.by/content/photo/newsdroplogo.png" alt="NewsDrop" class="live-logo" style="position:absolute; top:0; left:0; z-index:20;" onerror="this.style.display='none'">
                         <div class="live-plate flex flex-col gap-5">
                             <div class="flex items-start gap-8">
                                 <div class="shrink-0" style="width:120px;">
@@ -918,9 +918,9 @@ function resetBackground() {
 
 const bgProbe = new Image();
 bgProbe.onload = () => {
-    document.getElementById('bg-image-layer').style.backgroundImage = `url('content/photo/fon.png')`;
+    document.getElementById('bg-image-layer').style.backgroundImage = `url('https://minskmafia.by/content/photo/fon.png')`;
 };
-bgProbe.src = 'content/photo/fon.png';
+bgProbe.src = 'https://minskmafia.by/content/photo/fon.png';
 
 /* ==================== ПАНЕЛЬ "ТУРНИРЫ" ==================== */
 function renderTournamentsPanel() {

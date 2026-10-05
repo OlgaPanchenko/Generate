@@ -1,7 +1,7 @@
 {
   "name": "GRAPHICS GENERATOR News Drop",
   "short_name": "NewsDrop",
-  "start_url": "./1.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#39FF14",
