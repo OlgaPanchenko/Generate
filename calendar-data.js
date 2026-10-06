@@ -1,7 +1,7 @@
-/* NEWS DROP - данные календаря. Сгенерировано 2026-10-06 10:45.
+/* NEWS DROP - данные календаря. Сгенерировано 2026-10-06 11:20.
    Положи файл рядом со страницами и подключи тегом script. */
 window.NDROP_CALENDAR = {
-  "updatedAt": "2026-10-06 10:45",
+  "updatedAt": "2026-10-06 11:20",
   "tournaments": [
     {
       "id": 1,
@@ -91,6 +91,17 @@ window.NDROP_CALENDAR = {
       "id": 17,
       "name": "Halloween Cup",
       "fed": "bmf"
+    },
+    {
+      "id": 18,
+      "name": "Лига Клубов 3",
+      "fed": "msl"
+    },
+    {
+      "id": 19,
+      "name": "Осенний Кубок",
+      "fed": "msl",
+      "isSerial": true
     }
   ],
   "days": {
@@ -181,14 +192,26 @@ window.NDROP_CALENDAR = {
         "12": "1"
       }
     },
+    "2026-10-09": {
+      "tournaments": [
+        18
+      ],
+      "times": {
+        "18": "16:00"
+      },
+      "finals": [],
+      "series": {}
+    },
     "2026-10-10": {
       "tournaments": [
         11,
-        15
+        15,
+        18
       ],
       "times": {
         "11": "10:30",
-        "15": "11:00"
+        "15": "09:30",
+        "18": "13:00"
       },
       "finals": [],
       "series": {}
@@ -196,14 +219,28 @@ window.NDROP_CALENDAR = {
     "2026-10-11": {
       "tournaments": [
         11,
-        15
+        15,
+        18
       ],
       "times": {
         "11": "10:30",
-        "15": "11:00"
+        "15": "10:00",
+        "18": "13:00"
       },
       "finals": [],
       "series": {}
+    },
+    "2026-10-12": {
+      "tournaments": [
+        6
+      ],
+      "times": {
+        "6": "19:00"
+      },
+      "finals": [],
+      "series": {
+        "6": "5"
+      }
     },
     "2026-10-13": {
       "tournaments": [
@@ -259,33 +296,64 @@ window.NDROP_CALENDAR = {
         "10": "1"
       }
     },
-    "2026-10-20": {
+    "2026-10-19": {
       "tournaments": [
-        9
+        6
       ],
       "times": {
+        "6": "19:00"
+      },
+      "finals": [],
+      "series": {
+        "6": "6"
+      }
+    },
+    "2026-10-20": {
+      "tournaments": [
+        9,
+        7
+      ],
+      "times": {
+        "7": "19:00",
         "9": "19:00"
       },
       "finals": [],
       "series": {
+        "7": "20",
         "9": "3"
       }
     },
     "2026-10-21": {
       "tournaments": [
-        12
+        12,
+        3
       ],
       "times": {
+        "3": "19:00",
         "12": "19:00"
       },
       "finals": [],
       "series": {
+        "3": "49",
         "12": "3"
+      }
+    },
+    "2026-10-22": {
+      "tournaments": [
+        19
+      ],
+      "times": {
+        "19": "19:00"
+      },
+      "finals": [],
+      "series": {
+        "19": "1/4 финала N1"
       }
     },
     "2026-10-24": {
       "tournaments": [
-        13
+        13,
+        7
       ],
       "times": {
         "13": "10:30"
@@ -295,13 +363,32 @@ window.NDROP_CALENDAR = {
     },
     "2026-10-25": {
       "tournaments": [
-        13
+        13,
+        19,
+        6
       ],
       "times": {
-        "13": "10:30"
+        "6": "19:00",
+        "13": "10:30",
+        "19": "13:00"
       },
       "finals": [],
-      "series": {}
+      "series": {
+        "6": "7",
+        "19": "1/4 финала N4"
+      }
+    },
+    "2026-10-26": {
+      "tournaments": [
+        6
+      ],
+      "times": {
+        "6": "19:00"
+      },
+      "finals": [],
+      "series": {
+        "6": "8"
+      }
     },
     "2026-10-27": {
       "tournaments": [
@@ -317,27 +404,34 @@ window.NDROP_CALENDAR = {
     },
     "2026-10-28": {
       "tournaments": [
-        12
+        12,
+        3
       ],
       "times": {
+        "3": "19:00",
         "12": "19:00"
       },
       "finals": [],
       "series": {
+        "3": "50",
         "12": "4"
       }
     },
     "2026-10-31": {
       "tournaments": [
         14,
-        17
+        17,
+        19
       ],
       "times": {
         "14": "10:30",
-        "17": "18:00"
+        "17": "18:00",
+        "19": "13:00"
       },
       "finals": [],
-      "series": {}
+      "series": {
+        "19": "Полуфинал N1"
+      }
     }
   },
   "refTournaments": {
@@ -358,6 +452,9 @@ window.NDROP_CALENDAR = {
     },
     "14": {
       "reglament": "https://t.me/mm4_peglam/17"
+    },
+    "19": {
+      "table": "https://mediagame.by/tournament/osennii-kubok-2026?tab=results"
     }
   },
   "refFederations": {}
