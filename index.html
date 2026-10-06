@@ -281,14 +281,53 @@
         }
 
         /* Floating Table Formatting */
+        /* ===================== РАЗМЕРЫ ТАБЛИЦЫ =====================
+           Всё внутри таблицы считается от одной переменной --table-scale:
+           шрифты, отступы ячеек и просветы между строками. Поэтому
+           автоподгон меняет одно число, а сжимается таблица целиком.
+           Базовые значения ниже — самые плотные, при которых строка ещё
+           дышит; дальше ужимает уже автоподгон. */
         #canvas-main-table {
+            --table-scale: 1;
             border-collapse: separate !important;
-            border-spacing: 0 6px !important;
+            border-spacing: 0 calc(4px * var(--table-scale)) !important;
             width: 100% !important;
+            table-layout: fixed;
+        }
+        #canvas-main-table td {
+            padding: calc(7px * var(--table-scale)) calc(12px * var(--table-scale)) !important;
+        }
+        #canvas-main-table .cell-rank {
+            font-size: calc(18px * var(--table-scale));
+            width: calc(52px * var(--table-scale));
+        }
+        #canvas-main-table .cell-name  { font-size: calc(24px * var(--table-scale)); }
+        #canvas-main-table .cell-score {
+            font-size: calc(24px * var(--table-scale));
+            width: calc(110px * var(--table-scale));
+        }
+        /* Состав команды — второй строкой внутри той же ячейки: так команда
+           занимает одну строку таблицы вместо двух. */
+        #canvas-main-table .cell-roster {
+            font-size: calc(16px * var(--table-scale));
+            line-height: 1.15;
+            opacity: 0.78;
+            font-weight: 500;
+            margin-top: calc(2px * var(--table-scale));
+            white-space: normal;
+        }
+        #canvas-main-table .table-mini-avatar {
+            width: calc(38px * var(--table-scale));
+            height: calc(38px * var(--table-scale));
         }
 
         #canvas-main-table td, #canvas-main-table th {
             white-space: nowrap !important;
+        }
+        /* Длинные названия команд и составы переносятся, а не вылезают за панель */
+        #canvas-main-table td.cell-name {
+            white-space: normal !important;
+            overflow-wrap: anywhere;
         }
 
         /* Mini avatar styling inside table */
@@ -510,12 +549,32 @@
 <body class="p-3 lg:p-6 min-h-screen">
 
     <!-- Cross-tool navigation: switch between the poster / announcement / calendar generators -->
-    <div class="max-w-7xl mx-auto mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide">
+    <!-- Меню закреплено: при прокрутке длинной панели настроек остаётся под рукой.
+         Отрицательные отступы нужны, чтобы полоса шла во всю ширину поверх padding у body. -->
+    <div class="sticky top-0 z-50 -mx-3 lg:-mx-6 -mt-3 lg:-mt-6 mb-3 px-3 lg:px-6 py-2 bg-[#050608]/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide">
         <a href="1.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-800 text-amber-400 border-amber-500/40">Результаты</a>
         <a href="2.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Анонс</a>
         <a href="3.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Календарь</a>
+        <a href="5.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фед-ции</a>
+        <a href="6.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Рейтинги</a>
         <a href="4.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фото</a>
-         <a href="TG.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">TG</a>
+
+        <!-- Пресеты переехали в закреплённую полосу: тема меняется на любом
+             месте прокрутки, а не только наверху страницы -->
+        <div class="flex items-center gap-1.5 flex-wrap ml-auto">
+            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider hidden sm:inline"></span>
+            <button onclick="applyPreset('red_msl')" class="text-[11px] bg-red-950 hover:bg-red-900 text-red-300 px-2.5 py-1 rounded-lg border border-red-500/40 transition flex items-center gap-1 font-semibold">
+                🔴МСЛ
+            </button>
+            <button onclick="applyPreset('blue_mmt')" class="text-[11px] bg-sky-950 hover:bg-sky-900 text-sky-300 px-2.5 py-1 rounded-lg border border-sky-500/40 transition flex items-center gap-1 font-semibold">
+                🔵ММТ
+            </button>
+            <button onclick="applyPreset('green_bmf')" class="text-[11px] bg-emerald-950 hover:bg-emerald-900 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/40 transition flex items-center gap-1 font-semibold">
+                🟢BMF
+            </button>
+        </div>
+    </div>
     </div>
 
     <!-- Top Navigation Bar -->
@@ -528,19 +587,6 @@
             <p class="text-slate-400 text-xs sm:text-sm mt-1">Автоматическая загрузка логотипов тем из вашей папки с фото и идеальный HD-экспорт без изъянов</p>
         </div>
 
-        <!-- Preset Templates Selector -->
-        <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider hidden sm:inline">Темы:</span>
-            <button onclick="applyPreset('red_msl')" class="text-xs bg-red-950 hover:bg-red-900 text-red-300 px-3 py-1.5 rounded-lg border border-red-500/40 transition flex items-center gap-1 font-semibold">
-                🔴МСЛ
-            </button>
-            <button onclick="applyPreset('blue_mmt')" class="text-xs bg-sky-950 hover:bg-sky-900 text-sky-300 px-3 py-1.5 rounded-lg border border-sky-500/40 transition flex items-center gap-1 font-semibold">
-                🔵ММТ
-            </button>
-            <button onclick="applyPreset('green_bmf')" class="text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-300 px-3 py-1.5 rounded-lg border border-emerald-500/40 transition flex items-center gap-1 font-semibold">
-                🟢BMF
-            </button>
-        </div>
     </div>
 
     <!-- MAIN APP GRID CONTAINER -->
@@ -629,8 +675,8 @@
                     <label class="text-xs font-bold uppercase text-slate-400">Правая часть постера</label>
                     <select id="right-panel-mode" onchange="onRightPanelModeChange()" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs focus:outline-none focus:border-purple-500 font-medium">
                         <option value="photos" selected>Фото финалистов</option>
-                        <option value="nicknames">Без фото — список ников, кто прошёл дальше</option>
-                        <option value="none">Только таблица — совсем без фото</option>
+                        <option value="nicknames">Без фото - список ников, кто прошёл дальше</option>
+                        <option value="none">Только таблица - без фото</option>
                     </select>
                     <p class="text-[10px] text-slate-500 leading-tight">
                         В режиме «без фото» справа выводится список игроков, выделенных ниже в блоке «Выделение строк в таблице»
@@ -649,9 +695,9 @@
                     </div>
 
                     <div class="flex gap-2">
-                        <input type="text" id="config-folder-path" value="https://minskmafia.by/content/photo/" oninput="applyVisualConfig(); refreshBackgroundPhoto();" 
+                        <input type="text" id="config-folder-path" value="content/photo/" oninput="applyVisualConfig(); refreshBackgroundPhoto(); retargetStaticPhotos();" 
                                class="bg-slate-900 border border-slate-700 text-white font-mono text-xs p-2 rounded-lg focus:outline-none focus:border-purple-500 flex-1" 
-                               placeholder="https://minskmafia.by/content/photo/">
+                               placeholder="content/photo/">
                         
                         <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" onchange="handleFolderSelect(this)">
                         <button onclick="document.getElementById('folder-input').click()" 
@@ -686,7 +732,7 @@
         </select>
     </div>
     <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-bold text-slate-400 uppercase">Свое фото (опционально)</label>
+        <label class="text-xs font-bold text-slate-400 uppercase">Свое фото</label>
         <input type="file" id="winner-photo-file" accept="image/*" onchange="handleWinnerPhotoUpload(this)" class="hidden">
         <button onclick="document.getElementById('winner-photo-file').click()" class="bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs p-2 rounded-lg border border-slate-700 transition flex items-center justify-center gap-1 font-semibold">
             <span class="material-icons text-sm">upload_file</span>
@@ -703,7 +749,7 @@
         </select>
     </div>
     <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-bold text-slate-400 uppercase">Свое фото (опционально)</label>
+        <label class="text-xs font-bold text-slate-400 uppercase">Свое фото</label>
         <input type="file" id="winner-photo-file-2" accept="image/*" onchange="handleWinnerPhotoUpload2(this)" class="hidden">
         <button onclick="document.getElementById('winner-photo-file-2').click()" class="bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs p-2 rounded-lg border border-slate-700 transition flex items-center justify-center gap-1 font-semibold">
             <span class="material-icons text-sm">upload_file</span>
@@ -720,7 +766,7 @@
         </select>
     </div>
     <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-bold text-slate-400 uppercase">Свое фото (опционально)</label>
+        <label class="text-xs font-bold text-slate-400 uppercase">Свое фото</label>
         <input type="file" id="winner-photo-file-3" accept="image/*" onchange="handleWinnerPhotoUpload3(this)" class="hidden">
         <button onclick="document.getElementById('winner-photo-file-3').click()" class="bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs p-2 rounded-lg border border-slate-700 transition flex items-center justify-center gap-1 font-semibold">
             <span class="material-icons text-sm">upload_file</span>
@@ -731,8 +777,11 @@
                 </div> <!-- End photo-finalists-controls -->
                 <!-- Visual Element Toggles -->
                 <div class="bg-slate-950 p-3 border border-slate-800 rounded-xl flex flex-col gap-2.5">
-                    <span class="text-xs font-bold uppercase text-amber-400">Опции отображения</span>
-                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 font-medium">
+                    <button type="button" onclick="toggleDisplayOptions()" class="flex items-center justify-between w-full text-left">
+                        <span class="text-xs font-bold uppercase text-amber-400">Опции отображения</span>
+                        <span id="display-options-chevron" class="material-icons text-base text-slate-500">expand_more</span>
+                    </button>
+                    <div id="display-options-body" class="hidden grid-cols-2 gap-2 text-xs text-slate-300 font-medium">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" id="show-theme-logo" checked onchange="applyVisualConfig()" class="rounded accent-amber-500">
                             Авто-логотип темы
@@ -749,15 +798,13 @@
                             <input type="checkbox" id="show-vertical-watermark" onchange="applyVisualConfig()" class="rounded accent-amber-500">
                             Фоновый текст с ником
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="show-fog-overlay"  onchange="applyVisualConfig()" class="rounded accent-amber-500">
-                            Эффект тумана
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="show-stat-pillars" onchange="applyVisualConfig()" class="rounded accent-amber-500">
-                            Карточки со статистикой
-                        </label>
                     </div>
+                    <!-- «Эффект тумана» и «Карточки со статистикой» убраны из интерфейса:
+                         не используются. Сами переключатели оставлены скрытыми и
+                         выключенными — их читает код отрисовки и сохранения настроек,
+                         удалять их значило бы править десяток мест ради пустоты. -->
+                    <input type="checkbox" id="show-fog-overlay" class="hidden" onchange="applyVisualConfig()">
+                    <input type="checkbox" id="show-stat-pillars" class="hidden" onchange="applyVisualConfig()">
                 </div>
             </div>
             
@@ -855,10 +902,10 @@
                     <div class="flex flex-col gap-1.5">
                         <label class="text-xs font-bold text-slate-400 uppercase">Тема дизайна</label>
                         <select id="config-theme" onchange="onThemeChange()" class="bg-slate-950 border border-slate-800 text-white rounded-lg p-2.5 text-xs focus:outline-none focus:border-slate-600 font-medium">
-                            <option value="theme-red-msl">🔴 Красный МСЛ (logo_msl.png)</option>
-                            <option value="theme-blue-mmt">🔵 Синий ММТ (logo_mmt.png)</option>
-                            <option value="theme-green-bmf">🟢 Ярко-зеленый БМФ (logo_bmf.png)</option>
-                            <option value="theme-apple-glass">🍏 Apple Glass (стекло)</option>
+                            <option value="theme-red-msl">🔴 МСЛ (logo_msl.png)</option>
+                            <option value="theme-blue-mmt">🔵  ММТ (logo_mmt.png)</option>
+                            <option value="theme-green-bmf">🟢  БМФ (logo_bmf.png)</option>
+                            <option value="theme-apple-glass">🍏 Apple Glass</option>
                         </select>
                     </div>
 
@@ -878,7 +925,11 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-slate-400 uppercase">Главный заголовок</label>
-                        <input type="text" id="config-title" value="Итоги" oninput="applyVisualConfig()" class="bg-slate-950 border border-slate-800 text-white rounded-lg p-2 text-xs focus:outline-none">
+                        <input type="text" id="config-title" value="Итоги" oninput="onTitleTyped()" class="bg-slate-950 border border-slate-800 text-white rounded-lg p-2 text-xs focus:outline-none">
+                        <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-400 mt-0.5">
+                            <input type="checkbox" id="title-series-auto" onchange="onTitleSeriesToggle()" class="rounded accent-amber-500">
+                            Номер серии из календаря
+                        </label>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-slate-400 uppercase">Размер заголовка</label>
@@ -939,6 +990,30 @@
                         <label class="text-xs font-bold text-slate-400 uppercase">Футер справа</label>
                         <input type="text" id="footer-right-text" value="Серия 3/30 • 2026" oninput="applyVisualConfig()" class="bg-slate-950 border border-slate-800 text-white rounded-lg p-2 text-xs focus:outline-none">
                     </div>
+                </div>
+
+                <!-- Дата турнира. Подставляется из календаря по выбранному турниру,
+                     но остаётся обычным полем: вписала руками — твоё значение главнее. -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 font-medium">
+                        <input type="checkbox" id="show-canvas-date" checked onchange="applyVisualConfig()" class="rounded accent-amber-500">
+                        Дата турнира справа вверху
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" id="canvas-date-text" placeholder="26 сентября"
+                               oninput="onCanvasDateTyped()"
+                               class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs focus:outline-none flex-1">
+                        <button type="button" onclick="pullDateFromCalendar(true)" title="Взять дату из календаря"
+                                class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs px-3 rounded-lg border border-slate-700 transition flex items-center gap-1">
+                            <span class="material-icons text-sm">event</span>
+                        </button>
+                    </div>
+                    <select id="canvas-date-format" onchange="onCanvasDateFormatChange()"
+                            class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs focus:outline-none">
+                        <option value="long">26 сентября</option>
+                        <option value="short">26.09</option>
+                    </select>
+                    <p id="canvas-date-hint" class="text-[10px] text-slate-500 leading-tight"></p>
                 </div>
             </div>
 
@@ -1040,11 +1115,19 @@
 
                         <!-- Top Left Theme Logo (Auto-loaded from photos folder) -->
                         <img id="canvas-theme-logo" 
-                             src="https://minskmafia.by/content/photo/logo_msl.png" 
+                             src="content/photo/logo_msl.png" 
                              onerror="this.style.display='none'"
                              onload="this.style.display='block'"
                              class="absolute top-8 left-8 h-32 max-w-[300px] object-contain z-50 drop-shadow-2xl" 
                              alt="Theme Logo">
+
+                        <!-- Дата турнира: справа вверху, зеркально логотипу темы.
+                             Подтягивается из календаря 3.html по выбранному турниру. -->
+                        <div id="canvas-date" class="absolute top-8 right-8 z-50 hidden flex-col items-end">
+                            <span id="canvas-date-value" class="font-oswald font-bold main-text leading-none"
+                                  style="font-size:52px; letter-spacing:0.01em; opacity:0.72;
+                                         text-shadow:0 2px 8px rgba(0,0,0,0.35);"></span>
+                        </div>
 
                         <!-- Optional Background Vertical Nickname Watermark -->
                         <div id="vertical-watermark-text" class="vertical-watermark hidden">CASTOR TROY</div>
@@ -1084,7 +1167,7 @@
         <div class="flex flex-row items-center" style="gap:16px;">
         <div id="winner-card-slot-1" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element"
-                 src="https://minskmafia.by/content/photo/Castor Troy.png"
+                 src="content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 1)"
                  class="winner-photo-img"
                  alt="Featured Player 1">
@@ -1118,7 +1201,7 @@
          <div id="place-row-2" class="flex flex-row items-center hidden" style="gap:16px;">
 <div id="winner-card-slot-2" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element-2"
-                 src="https://minskmafia.by/content/photo/Castor Troy.png"
+                 src="content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 2)"
                  class="winner-photo-img"
                  alt="Featured Player 2">
@@ -1137,7 +1220,7 @@
         <div id="place-row-3" class="flex flex-row items-center hidden" style="gap:16px;">
 <div id="winner-card-slot-3" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element-3"
-                 src="https://minskmafia.by/content/photo/Castor Troy.png"
+                 src="content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 3)"
                  class="winner-photo-img"
                  alt="Featured Player 3">
@@ -1177,7 +1260,7 @@
                                 <div class="w-full flex items-center justify-between font-montserrat text-lg uppercase tracking-wider font-semibold opacity-90">
                                     <span id="footer-text-left-display" class="flex-1 text-left">Кубок МСЛ</span>
                                     <img id="canvas-footer-logo"
-                                         src="https://minskmafia.by/content/photo/newsdroplogo.png" 
+                                         src="content/photo/newsdroplogo.png" 
                                          onerror="this.style.display='none'" 
                                          onload="this.style.display='block'" 
                                          class="h-12 max-w-[200px] object-contain mx-4 drop-shadow-xl" 
@@ -1241,7 +1324,8 @@
              'show-vertical-watermark', 'show-fog-overlay', 'show-stat-pillars',
             'row-highlight-mode', 'show-bg-photo', 'bg-blur-range', 'bg-opacity-range', 'bg-darken-range',
             'config-theme', 'config-font-title', 'config-title', 'config-title-size',
-            'config-subtitle-size', 'config-custom-theme-logo', 'footer-right-text', 'export-scale'
+            'config-subtitle-size', 'config-custom-theme-logo', 'footer-right-text', 'export-scale',
+            'canvas-date-text', 'show-canvas-date', 'canvas-date-format', 'title-series-auto'
         ];
 
         function saveDesignState() {
@@ -1348,6 +1432,477 @@
         }
 
         // Helper to resolve photo source from memory or disk
+
+        /* ======================= ФОТО С ДРУГОГО ДОМЕНА =======================
+           Генератор может быть опубликован отдельно от папки с фото. Показать
+           чужую картинку браузер даст и так, а вот нарисовать её на canvas —
+           нет: холст «пачкается» и экспорт в PNG падает. Лечится атрибутом
+           crossorigin, но ставить его надо ДО загрузки картинки, иначе он ни на
+           что не влияет. Поэтому перехватываем присвоение src: для любой чужой
+           http(s)-ссылки атрибут проставляется сам.
+
+           Локальные относительные пути не трогаем: на странице, открытой с
+           диска, crossorigin ломает загрузку вообще.
+
+           Важно: сервер с фото должен отдавать заголовок
+           Access-Control-Allow-Origin. Без него картинка покажется, но в
+           экспорте останется серая плашка. */
+        (function () {
+    const desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+    if (!desc || !desc.set) return;
+    Object.defineProperty(HTMLImageElement.prototype, 'src', {
+        configurable: true,
+        enumerable: desc.enumerable,
+        get: desc.get,
+        set: function (value) {
+            const self = this;
+            let foreign = false;
+            try {
+                const raw = String(value == null ? '' : value);
+                foreign = /^https?:\/\//i.test(raw) &&
+                          new URL(raw, location.href).origin !== location.origin;
+            } catch (e) {}
+
+            if (!foreign) {
+                self.__srcToken = (self.__srcToken || 0) + 1;
+                desc.set.call(self, value);
+                return;
+            }
+
+            const token = (self.__srcToken = (self.__srcToken || 0) + 1);
+            const probe = new window.Image();
+            probe.crossOrigin = 'anonymous';
+            probe.onload = function () {
+                if (self.__srcToken !== token) return;
+                self.crossOrigin = 'anonymous';
+                desc.set.call(self, value);
+            };
+            probe.onerror = function () {
+                if (self.__srcToken !== token) return;
+                self.removeAttribute('crossorigin');
+                self.__noCors = true;
+                desc.set.call(self, value);
+            };
+            desc.set.call(probe, value);
+        }
+    });
+})();
+
+        /* Базовый путь к фото: то, что вписано в поле «Папка с фото». */
+
+        /* Раздел «Опции отображения» свёрнут по умолчанию: трогают его редко,
+           а места на экране он занимал много. */
+        function toggleDisplayOptions() {
+            const body = document.getElementById('display-options-body');
+            if (!body) return;
+            const hidden = body.classList.toggle('hidden');
+            body.classList.toggle('grid', !hidden);
+            const chevron = document.getElementById('display-options-chevron');
+            if (chevron) chevron.textContent = hidden ? 'expand_more' : 'expand_less';
+        }
+
+
+        /* ================== СВОРАЧИВАЕМЫЕ РАЗДЕЛЫ НАСТРОЕК ==================
+           Разметка у панелей разная, поэтому HTML каждой не правим: на старте
+           берём заголовок, а всё, что идёт после него внутри карточки, уводим
+           в один блок и прячем. Элементы остаются в DOM на своих id — код,
+           который их ищет и читает, работает как раньше.
+
+           «Опции отображения» здесь нет: у неё свой переключатель выше. */
+        const COLLAPSIBLE_PANELS = [
+            'Фото победителя',
+            'Фон постера',
+            'Стиль, Логотипы и Тексты',
+            'Список участников — настройки'
+        ];
+
+        function makeCollapsible(title) {
+            const heading = Array.from(document.querySelectorAll('h3, span'))
+                .find(el => !el.querySelector('*') && el.textContent.trim().startsWith(title));
+            if (!heading || heading.dataset.collapsible === '1') return false;
+
+            // Карточка — ближайший предок со скруглением
+            let panel = heading.parentElement;
+            while (panel && !/rounded-(2xl|xl)/.test(panel.className || '')) panel = panel.parentElement;
+            if (!panel) return false;
+
+            // Строка заголовка — прямой потомок карточки, внутри которого лежит заголовок
+            let headerRow = heading;
+            while (headerRow.parentElement && headerRow.parentElement !== panel) {
+                headerRow = headerRow.parentElement;
+            }
+            if (headerRow.parentElement !== panel) return false;
+
+            const rest = [];
+            let node = headerRow.nextElementSibling;
+            while (node) { rest.push(node); node = node.nextElementSibling; }
+            if (!rest.length) return false;
+
+            const body = document.createElement('div');
+            body.className = 'hidden flex-col gap-3';
+            rest.forEach(el => body.appendChild(el));
+            panel.appendChild(body);
+
+            const chevron = document.createElement('span');
+            chevron.className = 'material-icons text-base text-slate-500';
+            chevron.style.marginLeft = 'auto';
+            chevron.textContent = 'expand_more';
+
+            // Если заголовок сам по себе прямой потомок карточки (простая
+            // панель без строки-шапки), стрелку нельзя класть внутрь него —
+            // она попадёт в текст. Заворачиваем заголовок в строку.
+            if (headerRow === heading) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.gap = '8px';
+                panel.insertBefore(row, heading);
+                row.appendChild(heading);
+                headerRow = row;
+            } else if (!/(^|\s)(flex|grid)(\s|$)/.test(headerRow.className || '')) {
+                headerRow.style.display = 'flex';
+                headerRow.style.alignItems = 'center';
+                headerRow.style.gap = '8px';
+            }
+
+            headerRow.appendChild(chevron);
+            headerRow.style.cursor = 'pointer';
+
+            headerRow.addEventListener('click', ev => {
+                // Клик по кнопке или полю внутри шапки не должен сворачивать раздел
+                if (ev.target.closest('button, a, input, select, textarea')) return;
+                const hidden = body.classList.toggle('hidden');
+                body.classList.toggle('flex', !hidden);
+                chevron.textContent = hidden ? 'expand_more' : 'expand_less';
+            });
+
+            heading.dataset.collapsible = '1';
+            return true;
+        }
+
+        function setupCollapsiblePanels() {
+            COLLAPSIBLE_PANELS.forEach(makeCollapsible);
+        }
+
+
+        /* ===================== ДАТА ТУРНИРА ИЗ КАЛЕНДАРЯ =====================
+           Календарь 3.html хранит расписание в браузере под ключами
+           tourncal_*, а при выгрузке кладёт то же самое в calendar-data.js.
+           Читаем оба источника: на рабочем ноуте свежее хранилище, на телефоне
+           и на сайте — файл.
+
+           Какую дату берём: в результатах итоги подводят по уже сыгранному, поэтому берётся последняя прошедшая дата турнира
+
+           Поле остаётся обычным вводом. Как только ты напечатала своё
+           значение, автоподстановка для него больше не срабатывает — иначе
+           смена турнира затирала бы ручную правку. */
+        const CANVAS_DATE_PREFER_PAST = true;
+        const CANVAS_DATE_AUTO_KEY = 'ndrop_canvas_date_auto';
+        const CANVAS_DATE_ISO_KEY = 'ndrop_canvas_date_iso';
+        let canvasDateEdited = false;
+        // Дата хранится ещё и в машинном виде: без неё смена формата не смогла
+        // бы пересобрать текст, пришлось бы разбирать уже отформатированный.
+        let canvasDateIso = '';
+        try { canvasDateIso = localStorage.getItem(CANVAS_DATE_ISO_KEY) || ''; } catch (e) {}
+
+        /* Сохранённая дата, не совпадающая с последней автоподстановкой, —
+           ручная. Иначе перезагрузка страницы затирала бы её календарём. */
+        function detectManualCanvasDate() {
+            const field = document.getElementById('canvas-date-text');
+            if (!field || !field.value.trim()) return;
+            let auto = '';
+            try { auto = localStorage.getItem(CANVAS_DATE_AUTO_KEY) || ''; } catch (e) {}
+            if (field.value.trim() !== auto) canvasDateEdited = true;
+        }
+
+        function calendarSource() {
+            function read(key) {
+                try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }
+                catch (e) { return null; }
+            }
+            const local = read('tourncal_tournaments_v1');
+            if (Array.isArray(local) && local.length) return { read: read, file: null };
+            const file = (window.NDROP_CALENDAR && typeof window.NDROP_CALENDAR === 'object')
+                ? window.NDROP_CALENDAR : null;
+            return { read: read, file: file };
+        }
+
+        /* Все даты, на которые в календаре назначен турнир с таким названием. */
+        /* Даты турнира вместе с номером серии на каждой: номер живёт при дате,
+           а не при турнире, поэтому тащим его тем же проходом. */
+        function tournamentDates(name) {
+            const wanted = String(name || '').trim().toLowerCase();
+            if (!wanted) return [];
+
+            const src = calendarSource();
+            const pad = n => String(n).padStart(2, '0');
+            const dates = [];
+
+            if (src.file) {
+                const list = src.file.tournaments || [];
+                const ids = list.filter(t => String(t.name).trim().toLowerCase() === wanted).map(t => t.id);
+                if (!ids.length) return [];
+                Object.keys(src.file.days || {}).forEach(iso => {
+                    const day = src.file.days[iso] || {};
+                    const hit = (day.tournaments || []).filter(id => ids.indexOf(id) !== -1)[0];
+                    if (hit === undefined) return;
+                    dates.push({ iso: iso, series: (day.series || {})[hit] || '' });
+                });
+                return dates.sort((a, b) => a.iso < b.iso ? -1 : 1);
+            }
+
+            const list = src.read('tourncal_tournaments_v1') || [];
+            const ids = list.filter(t => String(t.name).trim().toLowerCase() === wanted).map(t => t.id);
+            if (!ids.length) return [];
+
+            // Расписание лежит помесячно: обходим текущий и следующий год
+            const thisYear = new Date().getFullYear();
+            for (let year = thisYear - 1; year <= thisYear + 1; year++) {
+                for (let month = 0; month < 12; month++) {
+                    const sched = src.read('tourncal_schedule_v1_' + year + '_' + month);
+                    if (!sched) continue;
+                    Object.keys(sched).forEach(day => {
+                        const hit = (sched[day] || []).filter(id => ids.indexOf(id) !== -1)[0];
+                        if (hit === undefined) return;
+                        const iso = year + '-' + pad(month + 1) + '-' + pad(parseInt(day, 10));
+                        const series = src.read('tourncal_series_v1_' + iso) || {};
+                        dates.push({ iso: iso, series: series[hit] || '' });
+                    });
+                }
+            }
+            return dates.sort((a, b) => a.iso < b.iso ? -1 : 1);
+        }
+
+        /* Два формата для постера: «26 сентября» и «26.09».
+           Месяцы в родительном падеже — так пишут дату в тексте. */
+        const CANVAS_DATE_MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                                    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+        function canvasDateFormat() {
+            const select = document.getElementById('canvas-date-format');
+            return select ? select.value : 'long';
+        }
+
+        function formatCalendarDate(iso, mode) {
+            const parts = String(iso).split('-');
+            if (parts.length !== 3) return '';
+            const chosen = mode || canvasDateFormat();
+            if (chosen === 'short') return parts[2] + '.' + parts[1];   // 26.09
+
+            const day = parseInt(parts[2], 10);
+            const monthIndex = parseInt(parts[1], 10) - 1;
+            return day + ' ' + (CANVAS_DATE_MONTHS[monthIndex] || '');   // 26 сентября
+        }
+
+        /* Смена формата переписывает только автодату: вписанное руками
+           остаётся как есть — мы не знаем, что там за текст. */
+        function onCanvasDateFormatChange() {
+            if (!canvasDateEdited && canvasDateIso) {
+                const field = document.getElementById('canvas-date-text');
+                if (field) {
+                    field.value = formatCalendarDate(canvasDateIso);
+                    try { localStorage.setItem(CANVAS_DATE_AUTO_KEY, field.value); } catch (e) {}
+                }
+            }
+            applyVisualConfig();
+        }
+
+        /* Ближайшее подходящее событие турнира. */
+        function findTournamentEvent(name) {
+            const dates = tournamentDates(name);
+            if (!dates.length) return null;
+
+            const today = new Date();
+            const iso = today.getFullYear() + '-' +
+                        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(today.getDate()).padStart(2, '0');
+
+            if (CANVAS_DATE_PREFER_PAST) {
+                // Итоги подводят по сыгранному: берём последнюю прошедшую дату
+                const past = dates.filter(d => d.iso <= iso);
+                return past.length ? past[past.length - 1] : dates[0];
+            }
+            // Анонсируют будущее: берём ближайшую предстоящую
+            const future = dates.filter(d => d.iso >= iso);
+            return future.length ? future[0] : dates[dates.length - 1];
+        }
+
+        function findTournamentDate(name) {
+            const event = findTournamentEvent(name);
+            return event ? event.iso : null;
+        }
+
+        function onCanvasDateTyped() {
+            canvasDateEdited = true;
+            applyVisualConfig();
+        }
+
+        /* force=true — кнопка «взять из календаря»: перебивает ручной ввод. */
+        function pullDateFromCalendar(force) {
+            const field = document.getElementById('canvas-date-text');
+            const hint = document.getElementById('canvas-date-hint');
+            if (!field) return;
+            if (canvasDateEdited && !force) return;
+
+            const select = document.getElementById('tournament-select');
+            const name = select ? select.value : '';
+            const iso = findTournamentDate(name);
+
+            if (iso) {
+                field.value = formatCalendarDate(iso);
+                canvasDateEdited = false;
+                canvasDateIso = iso;
+                // Запоминаем, что подставили сами: после перезагрузки это
+                // позволит отличить автодату от вписанной руками.
+                try {
+                    localStorage.setItem(CANVAS_DATE_AUTO_KEY, field.value);
+                    localStorage.setItem(CANVAS_DATE_ISO_KEY, iso);
+                } catch (e) {}
+                if (hint) hint.textContent = 'Дата из календаря для «' + name + '». Можно исправить руками.';
+            } else if (hint) {
+                hint.textContent = name
+                    ? 'В календаре нет дат для «' + name + '» — впиши вручную.'
+                    : 'Выбери турнир, и дата подтянется из календаря.';
+            }
+            applyVisualConfig();
+        }
+
+
+        /* ==================== АВТОПОДГОН ТАБЛИЦЫ ====================
+           Стеклянная панель обрезает всё лишнее (overflow: hidden), поэтому
+           десятый участник просто исчезал. Меряем реальную высоту таблицы и
+           ступенями уменьшаем --table-scale, пока она не поместится.
+
+           Ступени, а не плавный расчёт: так одинаковые составы всегда дают
+           одинаковый результат, и постеры серии выглядят единообразно. */
+        const TABLE_FIT_STEPS = [1, 0.94, 0.88, 0.82, 0.76, 0.70, 0.64, 0.58, 0.52, 0.46];
+
+        /* Проверяем две границы сразу, потому что обрезать может любая из них:
+           стеклянная панель (у неё overflow: hidden и высота от соседней
+           колонки с фото) и сам постер, если содержимое переросло 1280px. */
+        /* Насколько содержимое вылезает, в пикселях. Смотрим две границы:
+           стеклянную панель (у неё overflow: hidden, высоту ей задаёт соседняя
+           колонка с фото) и сам постер, если всё вместе переросло 1280px. */
+        function canvasTableOverflow() {
+            let worst = 0;
+
+            const container = document.getElementById('glass-table-container');
+            const table = document.getElementById('canvas-main-table');
+            if (container && table) {
+                const cs = getComputedStyle(container);
+                const avail = container.clientHeight
+                            - parseFloat(cs.paddingTop || 0)
+                            - parseFloat(cs.paddingBottom || 0);
+                if (avail >= 40) worst = Math.max(worst, table.offsetHeight - avail);
+            }
+
+            const holder = document.getElementById('canvas-holder');
+            const content = document.getElementById('poster-content');
+            if (holder && content) {
+                const hs = getComputedStyle(holder);
+                const room = holder.clientHeight
+                           - parseFloat(hs.paddingTop || 0)
+                           - parseFloat(hs.paddingBottom || 0);
+                if (room >= 40) worst = Math.max(worst, content.scrollHeight - room);
+            }
+            return worst;
+        }
+
+        function fitCanvasTable() {
+            const table = document.getElementById('canvas-main-table');
+            if (!table) return;
+
+            // Панель скрыта (горизонтальный формат) — мерить нечего
+            const container = document.getElementById('glass-table-container');
+            if (container && !container.offsetParent && container.clientHeight === 0) return;
+
+            let previous = TABLE_FIT_STEPS[0];
+            let previousOverflow = Infinity;
+
+            for (let i = 0; i < TABLE_FIT_STEPS.length; i++) {
+                table.style.setProperty('--table-scale', TABLE_FIT_STEPS[i]);
+                const overflow = canvasTableOverflow();
+                if (overflow <= 1) return;   // влезло
+
+                // Ступень не уменьшила переполнение — значит, вылезает не
+                // таблица, а что-то другое (например большое фото победителя).
+                // Дальше сжимать бессмысленно: откатываемся и выходим.
+                if (overflow >= previousOverflow - 1) {
+                    table.style.setProperty('--table-scale', previous);
+                    return;
+                }
+                previous = TABLE_FIT_STEPS[i];
+                previousOverflow = overflow;
+            }
+            // Даже на минимальной ступени не влезло — оставляем её, это честнее,
+            // чем молча обрезать строку.
+        }
+
+
+        /* ============ НОМЕР СЕРИИ В ГЛАВНОМ ЗАГОЛОВКЕ ============
+           Галка выключена по умолчанию: в результатах заголовок обычно
+           «Итоги», и молча затирать его номером — плохая идея. Включаешь —
+           заголовок начинает жить от календаря и обновляется при смене
+           турнира. Вписала своё поверх — автоподстановка замолкает до тех
+           пор, пока галку не переключишь заново. */
+        let titleEditedByHand = false;
+
+        function titleSeriesEnabled() {
+            const box = document.getElementById('title-series-auto');
+            return !!(box && box.checked);
+        }
+
+        function onTitleTyped() {
+            if (titleSeriesEnabled()) titleEditedByHand = true;
+            applyVisualConfig();
+        }
+
+        function onTitleSeriesToggle() {
+            titleEditedByHand = false;   // переключение = «начни заново»
+            applySeriesToTitle(true);
+            applyVisualConfig();
+        }
+
+        /* force=true — по нажатию галки: перебивает ручной текст. */
+        function applySeriesToTitle(force) {
+            if (!titleSeriesEnabled()) return;
+            if (titleEditedByHand && !force) return;
+
+            const select = document.getElementById('tournament-select');
+            const field = document.getElementById('config-title');
+            if (!select || !field) return;
+
+            const event = findTournamentEvent(select.value);
+            if (!event || !event.series) return;   // номера нет — заголовок не трогаем
+
+            field.value = event.series + ' СЕРИЯ';
+            titleEditedByHand = false;
+        }
+
+        function photoBase() {
+            const field = document.getElementById('config-folder-path');
+            const raw = (field ? field.value : '').trim() || 'content/photo/';
+            return raw.endsWith('/') ? raw : raw + '/';
+        }
+
+        /* Логотипы и заглушки прописаны прямо в разметке как content/photo/…
+           Переводим их на тот же базовый путь, что и остальные фото, иначе при
+           переезде на чужой хост они одни останутся битыми. */
+        function retargetStaticPhotos() {
+            const base = photoBase();
+            document.querySelectorAll('img').forEach(img => {
+                let file = img.getAttribute('data-photo-file');
+                if (!file) {
+                    const match = (img.getAttribute('src') || '').match(/^content\/photo\/(.+)$/);
+                    if (!match) return;
+                    file = match[1];
+                    img.setAttribute('data-photo-file', file);
+                }
+                const next = base + file;
+                if (img.getAttribute('src') !== next) img.src = next;   // через перехватчик выше
+            });
+        }
+
         function getPhotoSrc(filename, folderPath) {
             const cleanName = filename.trim().toLowerCase();
             if (loadedLocalFiles[cleanName]) {
@@ -1381,6 +1936,46 @@
             'theme-apple-glass': ['Apple Glass Кубок', 'Сезон 2026']
         };
 
+        /* Турниры из календаря (3.html): список федераций пополняется тем, что
+           реально заведено в календаре. Свои строки, вписанные здесь руками,
+           остаются — календарь только добавляет недостающие. */
+        const calendarTournamentNames = {};   // тема -> названия, подтянутые из календаря
+
+        function mergeTournamentsFromCalendar() {
+            let list;
+            try {
+                const raw = localStorage.getItem('tourncal_tournaments_v1');
+                list = raw ? JSON.parse(raw) : null;
+                if (!Array.isArray(list) && window.NDROP_CALENDAR) list = window.NDROP_CALENDAR.tournaments;
+            } catch (e) {
+                list = window.NDROP_CALENDAR ? window.NDROP_CALENDAR.tournaments : null;
+            }
+            if (!Array.isArray(list) || !list.length) return 0;
+
+            const THEME_BY_FED = {
+                msl: 'theme-red-msl',
+                mmt: 'theme-blue-mmt',
+                bmf: 'theme-green-bmf'
+            };
+
+            let added = 0;
+            list.forEach(function (t) {
+                const theme = THEME_BY_FED[t.fed];
+                if (!theme || !t.name) return;
+                if (!themeTournaments[theme]) themeTournaments[theme] = [];
+                if (!calendarTournamentNames[theme]) calendarTournamentNames[theme] = [];
+                if (calendarTournamentNames[theme].indexOf(t.name) === -1) {
+                    calendarTournamentNames[theme].push(t.name);
+                }
+                if (themeTournaments[theme].indexOf(t.name) === -1) {
+                    themeTournaments[theme].push(t.name);
+                    added++;
+                }
+            });
+            return added;
+        }
+
+
         // Tournaments added via addTournament() are persisted to localStorage so they
         // survive a page reload. localStorage is scoped per browser origin: this key is
         // shared between 1.html and 2.html only once both are served from the same
@@ -1410,7 +2005,15 @@
 
         function saveTournamentsToStorage() {
             try {
-                localStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(themeTournaments));
+                // Турниры, пришедшие из календаря, в своё хранилище не пишем:
+                // иначе переименование или удаление в календаре оставит здесь
+                // мёртвую строку навсегда. Сохраняем только то, что добавлено руками.
+                const own = {};
+                Object.keys(themeTournaments).forEach(theme => {
+                    const fromCalendar = calendarTournamentNames[theme] || [];
+                    own[theme] = themeTournaments[theme].filter(n => fromCalendar.indexOf(n) === -1);
+                });
+                localStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(own));
             } catch (e) {
                 console.warn('Не удалось сохранить турниры в localStorage', e);
             }
@@ -1429,7 +2032,7 @@
             const filename = DEFAULT_THEME_BACKGROUNDS[theme];
             if (!filename) return null;
 
-            const folderPath = document.getElementById('config-folder-path').value.trim() || 'https://minskmafia.by/content/photo/';
+            const folderPath = document.getElementById('config-folder-path').value.trim() || 'content/photo/';
             const formattedFolder = folderPath.endsWith('/') ? folderPath : folderPath + '/';
             return getPhotoSrc(filename, formattedFolder);
         }
@@ -1578,6 +2181,12 @@ if (label) {
             loadDesignState();
             rebuildWinnerSelectDropdown();
             rebuildPlayersEditor();
+            retargetStaticPhotos();
+            setupCollapsiblePanels();
+            detectManualCanvasDate();
+            pullDateFromCalendar(false);
+            applySeriesToTitle(false);
+            mergeTournamentsFromCalendar();
             updateTournamentDropdown('ЛЕТНИЙ КУБОК');
             onBgDarkenInput();
             setFinalistsCount(finalistsCount);
@@ -1841,6 +2450,8 @@ function handleWinnerPhotoUpload3(input) {
         }
 
         function onTournamentChange() {
+            pullDateFromCalendar(false);
+            applySeriesToTitle(false);
             applyVisualConfig();
         }
 
@@ -1910,7 +2521,7 @@ function handleWinnerPhotoUpload3(input) {
             const subtitle = footerLeft || 'Турнир';
             if (subtitleInput) subtitleInput.value = subtitle;
 
-            const folderPath = document.getElementById('config-folder-path').value.trim() || 'https://minskmafia.by/content/photo/';
+            const folderPath = document.getElementById('config-folder-path').value.trim() || 'content/photo/';
             const formattedFolder = folderPath.endsWith('/') ? folderPath : folderPath + '/';
 
             const showThemeLogo = document.getElementById('show-theme-logo').checked;
@@ -2047,15 +2658,31 @@ if (finalistsCount >= 3) {
             const statPillars = document.getElementById('stat-pillars-container');
             if (statPillars) statPillars.style.display = showStatPillars ? 'flex' : 'none';
 
+            // Дата турнира справа вверху
+            const dateBox = document.getElementById('canvas-date');
+            const dateField = document.getElementById('canvas-date-text');
+            const dateToggle = document.getElementById('show-canvas-date');
+            if (dateBox && dateField) {
+                const text = dateField.value.trim();
+                const visible = text && (!dateToggle || dateToggle.checked);
+                document.getElementById('canvas-date-value').textContent = text;
+                dateBox.classList.toggle('hidden', !visible);
+                dateBox.classList.toggle('flex', !!visible);
+            }
+
             // Background photo layer (blur is re-baked lazily via its own handlers; here we just sync visibility)
             refreshBackgroundPhoto();
 
             renderCanvasTable(showMiniAvatars, formattedFolder);
+            // Подгоняем после отрисовки: высоту можно померить только у готовых
+            // строк. Второй проход в rAF — на случай, если шрифты доезжают позже.
+            fitCanvasTable();
+            requestAnimationFrame(fitCanvasTable);
 
             saveDesignState();
         }
 
-     function renderCanvasTable(showMiniAvatars = false, folderPath = 'https://minskmafia.by/content/photo/') {
+     function renderCanvasTable(showMiniAvatars = false, folderPath = 'content/photo/') {
     const tbody = document.getElementById('canvas-table-body');
     tbody.innerHTML = '';
 
@@ -2114,13 +2741,14 @@ if (finalistsCount >= 3) {
             `<img src="${avatarSrc}" onerror="this.src='${createSvgPlaceholder(100, 100, player.name.charAt(0))}'" class="table-mini-avatar mr-3">` : '';
 
         tr.innerHTML = `
-            <td class="px-4 py-3 text-left italic text-lg w-12 ${rankClass}">${index + 1}</td>
-            <td class="px-4 py-3 font-bold text-left tracking-wide text-2xl">
+            <td class="cell-rank text-left italic ${rankClass}">${index + 1}</td>
+            <td class="cell-name font-bold text-left tracking-wide">
                 ${avatarHtml}
                 <span>${player.name || 'Участник'}</span>
             </td>
-            <td class="px-4 py-3 text-right font-extrabold text-2xl accent-text">${scoreVal}</td>
+            <td class="cell-score text-right font-extrabold accent-text">${scoreVal}</td>
         `;
+       // tr.querySelectorAll('img[data-src]').forEach(im => { im.src = im.getAttribute('data-src'); });
         tbody.appendChild(tr);
     });
 
@@ -2138,28 +2766,25 @@ function renderCanvasTableTeams(tbody) {
 
         const scoreVal = typeof team.score === 'number' ? team.score.toFixed(2) : parseFloat(team.score || 0).toFixed(2);
 
-        // Строка команды — та же структура колонок, что и у обычного игрока
-        // (место / название / баллы). Состав — отдельной строкой под названием,
-        // все игроки в одну строку через запятую, мельче.
+        // Команда занимает ОДНУ строку таблицы: название и состав лежат в одной
+        // ячейке друг под другом. Раньше состав шёл отдельной строкой — восемь
+        // команд превращались в шестнадцать строк и таблица не влезала.
+        const rosterText = (team.players || []).filter(Boolean).join(', ');
+        const rosterHtml = rosterText
+            ? `<div class="cell-roster">${rosterText}</div>`
+            : '';
+
         const teamRow = document.createElement('tr');
         teamRow.className = "hover:bg-black/5 transition";
         teamRow.innerHTML = `
-            <td class="px-4 py-3 text-left italic text-lg w-12 ${rankClass}">${index + 1}</td>
-            <td class="px-4 py-3 font-black text-left tracking-wide text-2xl">${team.name || 'Команда'}</td>
-            <td class="px-4 py-3 text-right font-extrabold text-2xl accent-text">${scoreVal}</td>
+            <td class="cell-rank text-left italic ${rankClass}">${index + 1}</td>
+            <td class="cell-name font-black text-left tracking-wide">
+                <div>${team.name || 'Команда'}</div>
+                ${rosterHtml}
+            </td>
+            <td class="cell-score text-right font-extrabold accent-text">${scoreVal}</td>
         `;
         tbody.appendChild(teamRow);
-
-        const rosterText = (team.players || []).filter(Boolean).join(', ');
-        if (rosterText) {
-            const rosterRow = document.createElement('tr');
-            rosterRow.className = "opacity-80";
-            rosterRow.innerHTML = `
-                <td class="px-4 py-1"></td>
-                <td class="px-4 pb-2 pl-8 text-left text-xl font-medium" colspan="2">${rosterText}</td>
-            `;
-            tbody.appendChild(rosterRow);
-        }
     });
 }
 
@@ -2471,6 +3096,120 @@ function renderQualifiersPanel(highlightedPlayers, themeAccentRgb, podiumRgb) {
             }
         }
 
+
+        /* ============== ВЫБОР КОЛОНКИ С БАЛЛАМИ ПРИ ВСТАВКЕ ==============
+           На mediagame.by таблица результатов широкая: 18 колонок, среди них
+           «Баллы», «Баллы за победу», «Баллы от судей» и «Ср. балл». Раньше
+           разбор брал последнее число в строке и приносил мусор, а то и «—».
+
+           Ищем колонку двумя способами по очереди:
+             1. По заголовку, если он вставлен вместе с таблицей. Точное
+                «Баллы» главнее составных «Баллы за победу» и «Ср. балл».
+             2. По данным: таблица результатов отсортирована по баллам, значит
+                нужная колонка — та, что не возрастает сверху вниз и содержит
+                разные значения. Работает и без заголовка.
+           Если не сработало ни то, ни другое — остаётся старое поведение. */
+
+        function splitPastedRow(line) {
+            if (line.indexOf('\t') !== -1) return line.split('\t').map(c => c.trim());
+            return line.split(/\s{2,}|[;|]/).map(c => c.trim());
+        }
+
+        function looksLikeHeaderRow(cells) {
+            const joined = cells.join(' ').toLowerCase();
+            return /игрок|участник|ник|player|name/.test(joined) && /балл|очк|score|point/.test(joined);
+        }
+
+        function scoreColumnFromHeader(cells) {
+            const head = cells.map(c => c.toLowerCase().replace(/\s+/g, ' ').trim());
+            let idx = head.findIndex(h => /^(баллы|балл|очки|score|points?|итого|total|результат)$/.test(h));
+            if (idx >= 0) return idx;
+            // «Баллы за победу», «Баллы от судей», «Ср. балл» — это НЕ итог
+            idx = head.findIndex(h => /^(баллы|балл|очки)\b/.test(h) && !/\b(за|от|ср\.?|средн)/.test(h));
+            if (idx >= 0) return idx;
+            return head.findIndex(h => /балл|очк|score|point/.test(h));
+        }
+
+        function nameColumnFromHeader(cells) {
+            const head = cells.map(c => c.toLowerCase().trim());
+            let idx = head.findIndex(h => /^(игрок|участник|ник|player|name|команда|team)$/.test(h));
+            if (idx >= 0) return idx;
+            return head.findIndex(h => /игрок|участник|ник|player|name|команда|team/.test(h));
+        }
+
+        function parsePastedNumber(cell) {
+            if (cell === undefined || cell === null) return null;
+            // «—», «–», пусто — это не ноль, а отсутствие значения
+            const raw = String(cell).replace(/—|–|−/g, '').replace(/\s/g, '').replace(',', '.');
+            if (!raw || !/^-?\d+(\.\d+)?$/.test(raw)) return null;
+            return parseFloat(raw);
+        }
+
+        /* Колонка, которая не возрастает сверху вниз — по ней таблица и
+           отсортирована. Место (1, 2, 3…) отбрасываем: оно возрастает. */
+        function scoreColumnFromData(rows, nameIdx) {
+            const width = Math.max.apply(null, rows.map(r => r.length));
+            let best = -1, bestSpread = -1;
+
+            for (let col = 0; col < width; col++) {
+                if (col === nameIdx) continue;
+                const values = rows.map(r => parsePastedNumber(r[col]));
+                const filled = values.filter(v => v !== null);
+                if (filled.length < Math.max(3, Math.ceil(rows.length * 0.8))) continue;
+
+                let nonIncreasing = true;
+                for (let i = 1; i < filled.length; i++) {
+                    if (filled[i] > filled[i - 1] + 1e-9) { nonIncreasing = false; break; }
+                }
+                if (!nonIncreasing) continue;
+
+                const distinct = new Set(filled).size;
+                if (distinct < 2) continue;                       // колонка-константа
+                const spread = Math.abs(filled[0] - filled[filled.length - 1]);
+                if (spread > bestSpread) { bestSpread = spread; best = col; }
+            }
+            return best;
+        }
+
+        /* Разбор вставленной широкой таблицы. Возвращает null, если это не
+           таблица — тогда вызывающий код работает по-старому, построчно. */
+        function parsePastedTable(lines) {
+            const rows = lines.map(splitPastedRow).filter(cells => cells.length >= 4);
+            if (rows.length < 2) return null;
+
+            let headerCells = null;
+            let dataRows = rows;
+            if (looksLikeHeaderRow(rows[0])) {
+                headerCells = rows[0];
+                dataRows = rows.slice(1);
+            }
+            if (dataRows.length < 2) return null;
+
+            let nameIdx = headerCells ? nameColumnFromHeader(headerCells) : -1;
+            if (nameIdx < 0) {
+                // Имя — первая колонка, где во всех строках не число
+                const width = Math.max.apply(null, dataRows.map(r => r.length));
+                for (let col = 0; col < width; col++) {
+                    const allText = dataRows.every(r => r[col] && parsePastedNumber(r[col]) === null);
+                    if (allText) { nameIdx = col; break; }
+                }
+            }
+            if (nameIdx < 0) return null;
+
+            let scoreIdx = headerCells ? scoreColumnFromHeader(headerCells) : -1;
+            if (scoreIdx < 0 || scoreIdx === nameIdx) scoreIdx = scoreColumnFromData(dataRows, nameIdx);
+            if (scoreIdx < 0) return null;
+
+            const out = [];
+            dataRows.forEach(cells => {
+                const name = cleanImportedName(cells[nameIdx] || '');
+                if (!name) return;
+                const score = parsePastedNumber(cells[scoreIdx]);
+                out.push({ name: name, score: score === null ? 0 : score });
+            });
+            return out.length >= 2 ? out : null;
+        }
+
         function importFromPastedText() {
             if (tournamentMode === 'team') {
                 importTeamsFromPastedText();
@@ -2492,6 +3231,12 @@ function renderQualifiersPanel(highlightedPlayers, themeAccentRgb, podiumRgb) {
             let parsedList = [];
             const lines = text.split('\n');
 
+            // Сначала пробуем разобрать как таблицу с колонками (копипаста с
+            // mediagame.by и подобных). Не вышло — идём построчно, как раньше.
+            const tableRows = parsePastedTable(lines.filter(l => l.trim()));
+            if (tableRows) {
+                parsedList = tableRows;
+            } else
             lines.forEach(line => {
                 let clean = line.trim();
                 if (!clean) return;
@@ -2876,11 +3621,18 @@ function renderQualifiersPanel(highlightedPlayers, themeAccentRgb, podiumRgb) {
                 const rows = Array.from(table.querySelectorAll('tr'));
                 if (rows.length < 2) return;
 
-                const headerCells = Array.from(rows[0].querySelectorAll('th,td')).map(c => (c.innerText || c.textContent || '').trim().toLowerCase());
-                let scoreIndex = -1;
-                headerCells.forEach((h, i) => {
-                    if (/(score|points?|очки|балл|баллы|итого|total|результат)/i.test(h)) scoreIndex = i;
-                });
+                const headerCells = Array.from(rows[0].querySelectorAll('th,td'))
+                    .map(c => (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase());
+                // Точное «Баллы» главнее составных «Баллы за победу», «Баллы от
+                // судей», «Ср. балл» — раньше цикл забирал последнее совпадение
+                // и в постер уезжал средний балл вместо итогового.
+                let scoreIndex = headerCells.findIndex(h => /^(баллы|балл|очки|score|points?|итого|total|результат)$/.test(h));
+                if (scoreIndex < 0) {
+                    scoreIndex = headerCells.findIndex(h => /^(баллы|балл|очки)\b/.test(h) && !/\b(за|от|ср\.?|средн)/.test(h));
+                }
+                if (scoreIndex < 0) {
+                    scoreIndex = headerCells.findIndex(h => /(score|points?|очки|балл|итого|total|результат)/.test(h));
+                }
 
                 rows.slice(1).forEach(row => {
                     const cells = Array.from(row.querySelectorAll('th,td')).map(c => (c.innerText || c.textContent || '').trim());
@@ -3212,8 +3964,16 @@ function renderQualifiersPanel(highlightedPlayers, themeAccentRgb, podiumRgb) {
                 doc.querySelectorAll('table').forEach(table => {
                     const rows = Array.from(table.querySelectorAll('tr'));
                     if (rows.length < 2) return;
-                    const headerCells = Array.from(rows[0].querySelectorAll('th,td')).map(c => (c.innerText || c.textContent || '').trim().toLowerCase());
-                    let scoreIndex = headerCells.findIndex(h => /(score|points?|очки|балл|баллы|итого|total|результат|∑)/i.test(h));
+                    const headerCells = Array.from(rows[0].querySelectorAll('th,td'))
+                        .map(c => (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase());
+                    // Точное «Баллы» главнее «Баллы за победу» и «Ср. балл»
+                    let scoreIndex = headerCells.findIndex(h => /^(баллы|балл|очки|score|points?|итого|total|результат|∑)$/.test(h));
+                    if (scoreIndex < 0) {
+                        scoreIndex = headerCells.findIndex(h => /^(баллы|балл|очки)\b/.test(h) && !/\b(за|от|ср\.?|средн)/.test(h));
+                    }
+                    if (scoreIndex < 0) {
+                        scoreIndex = headerCells.findIndex(h => /(score|points?|очки|балл|итого|total|результат|∑)/.test(h));
+                    }
 
                     rows.slice(1).forEach(row => {
                         const cells = Array.from(row.querySelectorAll('th,td')).map(c => (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim());
@@ -3347,8 +4107,11 @@ function renderQualifiersPanel(highlightedPlayers, themeAccentRgb, podiumRgb) {
                     document.getElementById('import-pasted-text').value = parsedList.map((p, i) => `${i + 1}. ${p.name} ${p.score}`).join('\n');
                     showNotification(`MediaGame: импортировано ${parsedList.length} участников. Федерация автоматически установлена: МСЛ.`, 'success');
                 } else {
-                    document.getElementById('import-pasted-text').value = htmlText;
-                    showNotification('MediaGame загрузился, но результаты не распознаны автоматически. Проверьте вкладку «Вставка текста».', 'error');
+                    // Страница MediaGame приходит пустым каркасом: таблицу рисует
+                    // скрипт, а данные забирает защищённым запросом с токеном
+                    // сессии, которого у прокси нет. Не сваливаем в поле вставки
+                    // сырой HTML — он там только мешает.
+                    showNotification('MediaGame так не отдаёт результаты: таблицу рисует скрипт уже в браузере. Скопируй таблицу со страницы и вставь ниже, либо нажми закладку «Результаты → буфер» (инструкция в файле mediagame-букмарклет.txt).', 'error');
                 }
             } catch (e) {
                 showNotification('Не удалось загрузить MediaGame: ' + (e.message || 'ошибка сети') + '. Можно использовать вкладку «Вставка текста».', 'error');
@@ -3486,5 +4249,7 @@ function renderQualifiersPanel(highlightedPlayers, themeAccentRgb, podiumRgb) {
             }
         }
     </script>
+
+<script src="publisher-bridge.js"></script>
 </body>
 </html>

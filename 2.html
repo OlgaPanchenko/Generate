@@ -751,22 +751,22 @@
         <a href="index.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Результаты</a>
         <a href="2.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-800 text-amber-400 border-amber-500/40">Анонс</a>
         <a href="3.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Календарь</a>
-        <a href="5.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Федерации</a>
+        <a href="5.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фед-ции</a>
         <a href="6.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Рейтинги</a>
-        <a href="4.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фото игроков</a>
+        <a href="4.html" class="px-3 py-1.5 rounded-lg border transition bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200">Фото</a>
 
         <!-- Пресеты переехали в закреплённую полосу: тема меняется на любом
              месте прокрутки, а не только наверху страницы -->
         <div class="flex items-center gap-1.5 flex-wrap ml-auto">
-            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider hidden sm:inline">Пресеты:</span>
+            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider hidden sm:inline"></span>
             <button onclick="applyPreset('red_msl')" class="text-[11px] bg-red-950 hover:bg-red-900 text-red-300 px-2.5 py-1 rounded-lg border border-red-500/40 transition flex items-center gap-1 font-semibold">
-                🔴 Красный МСЛ
+                🔴МСЛ
             </button>
             <button onclick="applyPreset('blue_mmt')" class="text-[11px] bg-sky-950 hover:bg-sky-900 text-sky-300 px-2.5 py-1 rounded-lg border border-sky-500/40 transition flex items-center gap-1 font-semibold">
-                🔵 Синий ММТ
+                🔵ММТ
             </button>
             <button onclick="applyPreset('green_bmf')" class="text-[11px] bg-emerald-950 hover:bg-emerald-900 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/40 transition flex items-center gap-1 font-semibold">
-                🟢 Ярко-зеленый BMF
+                🟢BMF
             </button>
         </div>
     </div>
@@ -1373,7 +1373,7 @@
 
                         <!-- Top Left Theme Logo (Auto-loaded from photos folder) -->
                         <img id="canvas-theme-logo" 
-                             src="https://minskmafia.by/content/photo/logo_msl.png" 
+                             src="content/photo/logo_msl.png" 
                              onerror="this.style.display='none'"
                              onload="this.style.display='block'"
                              class="absolute top-8 left-8 h-32 max-w-[300px] object-contain z-50 drop-shadow-2xl" 
@@ -1431,7 +1431,7 @@
         <div class="flex flex-row items-center" style="gap:16px;">
         <div id="winner-card-slot-1" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element"
-                 src="https://minskmafia.by/content/photo/Castor Troy.png"
+                 src="content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 1)"
                  class="winner-photo-img"
                  alt="Featured Player 1">
@@ -1465,7 +1465,7 @@
          <div id="place-row-2" class="flex flex-row items-center hidden" style="gap:16px;">
 <div id="winner-card-slot-2" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element-2"
-                 src="https://minskmafia.by/content/photo/Castor Troy.png"
+                 src="content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 2)"
                  class="winner-photo-img"
                  alt="Featured Player 2">
@@ -1484,7 +1484,7 @@
         <div id="place-row-3" class="flex flex-row items-center hidden" style="gap:16px;">
 <div id="winner-card-slot-3" class="winner-card-container relative" style="width:420px;">
             <img id="winner-photo-element-3"
-                 src="https://minskmafia.by/content/photo/Castor Troy.png"
+                 src="content/photo/Castor Troy.png"
                  onerror="handleWinnerPhotoError(this, 3)"
                  class="winner-photo-img"
                  alt="Featured Player 3">
@@ -1515,7 +1515,7 @@
                                 <div class="w-full flex items-center justify-between font-montserrat text-xs uppercase tracking-wider font-semibold opacity-90">
                                     <span id="footer-text-left-display" class="flex-1 text-left">Кубок МСЛ</span>
                                     <img id="canvas-footer-logo" 
-                                         src="https://minskmafia.by/content/photo/newsdroplogo.png" 
+                                         src="content/photo/newsdroplogo.png" 
                                          onerror="this.style.display='none'" 
                                          onload="this.style.display='block'" 
                                          class="h-12 max-w-[200px] object-contain mx-4 drop-shadow-xl" 
